@@ -1,0 +1,27 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+
+# Visual Studio
+.vs/
+
+# MAUI / packaging
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+
+# User secrets are stored outside the repo (%APPDATA%\Microsoft\UserSecrets) —
+# nothing secret should ever land in-tree, but guard against accidental copies anyway.
+appsettings.Development.json
+appsettings.*.local.json
+.env
+.env.*
+!.env.example
+
+# OS cruft
+Thumbs.db
+.DS_Store

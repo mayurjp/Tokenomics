@@ -32,6 +32,35 @@ public sealed class GeminiProvider(HttpClient httpClient) : ILlmProvider
         }
     }
 
+    public async Task<IReadOnlyList<string>> ListModelsAsync(string apiKey, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "models?pageSize=1000");
+        request.Headers.Add("x-goog-api-key", apiKey);
+
+        using var response = await httpClient.SendAsync(request, ct);
+        var rawJson = await response.Content.ReadAsStringAsync(ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorMessage = TryExtractErrorMessage(rawJson) ?? $"Gemini API request failed with status {(int)response.StatusCode}";
+            throw new GeminiApiException(errorMessage);
+        }
+
+        var parsed = JsonSerializer.Deserialize<GeminiModelsResponse>(rawJson)
+            ?? throw new GeminiApiException("Gemini API returned an empty response");
+
+        return parsed.Models?
+            .Where(m => m.SupportedGenerationMethods?.Contains("generateContent") == true)
+            .Select(m => m.Name?.StartsWith("models/", StringComparison.Ordinal) == true
+                ? m.Name["models/".Length..]
+                : m.Name)
+            .Where(name => !string.IsNullOrEmpty(name))
+            .Select(name => name!)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? [];
+    }
+
     public async Task<MeasureResult> MeasureAsync(string apiKey, string model, string prompt, CancellationToken ct = default)
     {
         var body = new GeminiGenerateRequest

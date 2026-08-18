@@ -63,6 +63,29 @@ public sealed class GeminiUsageMetadata
     public int? ThoughtsTokenCount { get; init; }
 }
 
+public sealed class GeminiModelsResponse
+{
+    [JsonPropertyName("models")]
+    public List<GeminiModelInfo>? Models { get; init; }
+
+    [JsonPropertyName("nextPageToken")]
+    public string? NextPageToken { get; init; }
+}
+
+public sealed class GeminiModelInfo
+{
+    // Wire format is "models/gemini-3.5-flash" — the provider strips the prefix
+    // before handing names back, since callers pass bare model ids elsewhere (generateContent).
+    [JsonPropertyName("name")]
+    public string? Name { get; init; }
+
+    [JsonPropertyName("displayName")]
+    public string? DisplayName { get; init; }
+
+    [JsonPropertyName("supportedGenerationMethods")]
+    public List<string>? SupportedGenerationMethods { get; init; }
+}
+
 public sealed class GeminiErrorEnvelope
 {
     [JsonPropertyName("error")]

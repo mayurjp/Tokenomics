@@ -3,9 +3,9 @@ using Tokenomics.Core.Models;
 namespace Tokenomics.Core.Providers;
 
 // One implementation per LLM provider (Gemini today; Claude/OpenAI later).
-// Keeping this to two methods is deliberate: it's the minimum needed for A1
-// measurement plus a key-validation check, and it's what a future fan-out
-// comparison (same prompt across providers) will call once per provider.
+// Kept small and deliberate: this is the minimum needed for A1 measurement,
+// a key-validation check, and model selection — and it's what a future
+// fan-out comparison (same prompt across providers) will call once per provider.
 public interface ILlmProvider
 {
     // Stable id used as the key in storage/config, e.g. "gemini".
@@ -14,10 +14,14 @@ public interface ILlmProvider
     // Human-readable name for the UI, e.g. "Google Gemini".
     string DisplayName { get; }
 
-    // Default model to use when the caller doesn't specify one.
+    // Default model to use when the caller doesn't specify one, or hasn't picked one yet.
     string DefaultModel { get; }
 
     Task<ConnectionTestResult> TestConnectionAsync(string apiKey, CancellationToken ct = default);
+
+    // Models this key can actually call, restricted to ones that support text generation
+    // (excludes embedding-only models etc.) — used to populate a model picker in the UI.
+    Task<IReadOnlyList<string>> ListModelsAsync(string apiKey, CancellationToken ct = default);
 
     Task<MeasureResult> MeasureAsync(string apiKey, string model, string prompt, CancellationToken ct = default);
 }

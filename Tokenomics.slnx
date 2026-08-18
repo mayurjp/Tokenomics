@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tokenomics.Core/Tokenomics.Core.csproj" />
+    <Project Path="src/Tokenomics.Storage.Sqlite/Tokenomics.Storage.Sqlite.csproj" />
+    <Project Path="src/Tokenomics.Windows/Tokenomics.Windows.csproj" />
+  </Folder>
+</Solution>

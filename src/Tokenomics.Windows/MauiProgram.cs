@@ -24,6 +24,7 @@ public static class MauiProgram
 		// only here, per the split documented in docs/phase1r-windows-app-design.md.
 		builder.Services.AddTokenomicsCore();
 		builder.Services.AddSingleton<IApiKeyStore>(new SqliteApiKeyStore());
+		builder.Services.AddSingleton<IProviderSettingsStore>(new SqliteProviderSettingsStore());
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

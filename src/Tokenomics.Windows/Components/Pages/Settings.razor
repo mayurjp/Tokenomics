@@ -3,6 +3,7 @@
 @using Tokenomics.Core.Storage
 @inject ProviderRegistry ProviderRegistry
 @inject IApiKeyStore ApiKeyStore
+@inject IProviderSettingsStore ProviderSettingsStore
 
 <h1>Settings</h1>
 <p class="text-muted">Enter and test an API key for each provider. Keys are stored locally, encrypted.</p>
@@ -40,6 +41,21 @@
                     @message
                 </p>
             }
+
+            @if (_modelsByProvider.TryGetValue(provider.ProviderId, out var models) && models.Count > 0)
+            {
+                <label class="form-label mt-3">Model</label>
+                <select class="form-select" @bind="_selectedModel[provider.ProviderId]" @bind:after="() => SaveSelectedModelAsync(provider)">
+                    @foreach (var model in models)
+                    {
+                        <option value="@model">@model</option>
+                    }
+                </select>
+            }
+            else if (saved)
+            {
+                <p class="text-muted mt-3">Using default model: @provider.DefaultModel (model list unavailable — @_modelListError.GetValueOrDefault(provider.ProviderId, "not loaded yet"))</p>
+            }
         </div>
     </div>
 }
@@ -49,6 +65,9 @@
     private readonly Dictionary<string, bool> _savedState = new();
     private readonly Dictionary<string, string> _messages = new();
     private readonly Dictionary<string, bool> _messageIsError = new();
+    private readonly Dictionary<string, List<string>> _modelsByProvider = new();
+    private readonly Dictionary<string, string> _selectedModel = new();
+    private readonly Dictionary<string, string> _modelListError = new();
     private readonly HashSet<string> _busy = new();
 
     protected override async Task OnInitializedAsync()
@@ -56,7 +75,17 @@
         foreach (var provider in ProviderRegistry.All)
         {
             _keyInputs[provider.ProviderId] = string.Empty;
-            _savedState[provider.ProviderId] = await ApiKeyStore.HasKeyAsync(provider.ProviderId);
+            var hasKey = await ApiKeyStore.HasKeyAsync(provider.ProviderId);
+            _savedState[provider.ProviderId] = hasKey;
+
+            if (hasKey)
+            {
+                var apiKey = await ApiKeyStore.GetKeyAsync(provider.ProviderId);
+                if (apiKey is not null)
+                {
+                    await LoadModelsAsync(provider, apiKey);
+                }
+            }
         }
     }
 
@@ -83,6 +112,8 @@
                 _savedState[provider.ProviderId] = true;
                 _keyInputs[provider.ProviderId] = string.Empty;
                 SetMessage(provider.ProviderId, "Connection succeeded — key saved.", isError: false);
+
+                await LoadModelsAsync(provider, apiKey);
             }
             else
             {
@@ -95,10 +126,41 @@
         }
     }
 
+    private async Task LoadModelsAsync(ILlmProvider provider, string apiKey)
+    {
+        try
+        {
+            var models = await provider.ListModelsAsync(apiKey);
+            _modelsByProvider[provider.ProviderId] = models.ToList();
+            _modelListError.Remove(provider.ProviderId);
+
+            var savedModel = await ProviderSettingsStore.GetSelectedModelAsync(provider.ProviderId);
+            _selectedModel[provider.ProviderId] = savedModel is not null && models.Contains(savedModel)
+                ? savedModel
+                : models.Contains(provider.DefaultModel) ? provider.DefaultModel : models.FirstOrDefault() ?? provider.DefaultModel;
+
+            // Persist the resolved default so Measure's read-side doesn't need its own fallback logic.
+            await ProviderSettingsStore.SaveSelectedModelAsync(provider.ProviderId, _selectedModel[provider.ProviderId]);
+        }
+        catch (Exception ex)
+        {
+            _modelListError[provider.ProviderId] = ex.Message;
+        }
+    }
+
+    private async Task SaveSelectedModelAsync(ILlmProvider provider)
+    {
+        if (_selectedModel.TryGetValue(provider.ProviderId, out var model))
+        {
+            await ProviderSettingsStore.SaveSelectedModelAsync(provider.ProviderId, model);
+        }
+    }
+
     private async Task ClearAsync(ILlmProvider provider)
     {
         await ApiKeyStore.DeleteKeyAsync(provider.ProviderId);
         _savedState[provider.ProviderId] = false;
+        _modelsByProvider.Remove(provider.ProviderId);
         SetMessage(provider.ProviderId, "Key cleared.", isError: false);
     }
 

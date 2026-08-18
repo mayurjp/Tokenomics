@@ -17,7 +17,7 @@ public sealed class SqliteApiKeyStore : IApiKeyStore
         dbPath ??= Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Tokenomics",
-            "tokenexplorer.db");
+            "tokenomics.db");
 
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
         _connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();

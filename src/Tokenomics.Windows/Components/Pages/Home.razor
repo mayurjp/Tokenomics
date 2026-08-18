@@ -4,6 +4,7 @@
 @using Tokenomics.Core.Storage
 @inject ProviderRegistry ProviderRegistry
 @inject IApiKeyStore ApiKeyStore
+@inject IProviderSettingsStore ProviderSettingsStore
 
 <h1>Token Economics Explorer</h1>
 <p class="text-muted">A1 — Measurement: type a prompt, see the real token breakdown.</p>
@@ -16,6 +17,8 @@
 }
 else
 {
+    <p class="text-muted">Model: @_model <a href="settings">(change)</a></p>
+
     <label for="prompt" class="form-label fw-bold">Prompt</label>
     <textarea id="prompt" class="form-control" rows="5" @bind="_prompt" placeholder="Type any prompt..."></textarea>
 
@@ -52,6 +55,7 @@ else
     private const string ProviderId = "gemini";
 
     private bool? _hasKey;
+    private string _model = string.Empty;
     private string _prompt = string.Empty;
     private bool _isRunning;
     private string? _errorMessage;
@@ -60,6 +64,11 @@ else
     protected override async Task OnInitializedAsync()
     {
         _hasKey = await ApiKeyStore.HasKeyAsync(ProviderId);
+        if (_hasKey == true)
+        {
+            var provider = ProviderRegistry.Get(ProviderId);
+            _model = await ProviderSettingsStore.GetSelectedModelAsync(ProviderId) ?? provider.DefaultModel;
+        }
     }
 
     private async Task RunAsync()
@@ -80,7 +89,7 @@ else
                 ?? throw new InvalidOperationException("No Gemini key saved — set one in Settings first.");
 
             var provider = ProviderRegistry.Get(ProviderId);
-            _result = await provider.MeasureAsync(apiKey, provider.DefaultModel, _prompt);
+            _result = await provider.MeasureAsync(apiKey, _model, _prompt);
         }
         catch (Exception ex)
         {

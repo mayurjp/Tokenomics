@@ -110,6 +110,32 @@ const RUNS = {
     stuffed: { input: 2418, output: 88, thinking: null, text: ANSWER_SHORT },
     retrieved: { input: 96, output: 84, thinking: null, text: ANSWER_SHORT },
   },
+  semantic: {
+    ask: {
+      input: 24, output: 58, thinking: null,
+      text: 'Most applications send a time-limited reset link to the address on file after the user requests one from the sign-in page. Following that link lets them set a new password, which invalidates the old one and any active sessions.',
+    },
+  },
+  finops: {
+    summarizer: {
+      input: 118, output: 46, thinking: null,
+      text: 'Export button fails in Firefox only; preflight returns 403 from the download host. Enterprise customer, escalated twice, rejects the use-Chrome workaround.',
+    },
+    rewriter: {
+      input: 26, output: 12, thinking: null,
+      text: 'firefox report export 403 CORS preflight failure',
+    },
+    chat: {
+      input: 29, output: 214, thinking: null,
+      text:
+        'Welcome — the quickest way in is to connect a data source from the Sources tab, then ' +
+        'open the starter dashboard it generates for you. That gives you something real to look ' +
+        'at within a couple of minutes rather than a blank canvas.\n\n' +
+        'From there, most people duplicate a starter chart and change its query. Everything is ' +
+        'editable, nothing you do is destructive, and you can always reset a dashboard to its ' +
+        'original state if an experiment goes sideways.',
+    },
+  },
   compression: {
     verbatim: {
       input: 641, output: 112, thinking: null,
@@ -121,6 +147,26 @@ const RUNS = {
     },
   },
 };
+
+// Deterministic pseudo-embeddings: the same text always gives the same vector, and the
+// rewordings are built to land near the original while the router question does not. The
+// similarity the card shows is still computed from these vectors by the real cosine
+// function — demo mode fakes the embedding service, not the maths.
+const DEMO_VECTORS = {
+  'How do I reset my password?': [0.9, 0.32, 0.2, 0.1],
+  'I forgot my password, what now?': [0.88, 0.36, 0.22, 0.12],
+  'password reset help please': [0.86, 0.39, 0.25, 0.09],
+  'How do I reset my router?': [0.42, 0.3, 0.8, 0.28],
+};
+
+export async function demoEmbed(text) {
+  await latency(200);
+  if (DEMO_VECTORS[text]) return DEMO_VECTORS[text];
+  // Anything unexpected still gets a stable vector, derived from the text itself.
+  let h = 0;
+  for (let i = 0; i < text.length; i += 1) h = (h * 31 + text.charCodeAt(i)) % 1000;
+  return [h / 1000, ((h * 7) % 1000) / 1000, ((h * 13) % 1000) / 1000, ((h * 17) % 1000) / 1000];
+}
 
 // Synchronous: with no server, the catalog is static data in both modes and there is
 // nothing to wait for.
@@ -159,6 +205,8 @@ const COMPARE = {
 };
 
 const LABELS = {
+  semantic: { ask: 'answer the question' },
+  finops: { summarizer: 'Ticket summarizer', rewriter: 'Search rewriter', chat: 'Onboarding chat' },
   'single-call': { default: 'one call' },
   thinking: { on: 'thinking on', off: 'thinking off' },
   caching: { first: 'first call', second: 'second call' },

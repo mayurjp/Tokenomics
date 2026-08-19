@@ -81,13 +81,14 @@ Backed by `generateContent` — these really run the model:
 | Context Compression | Full history vs a summary |
 | Batch API | Submits a real batch job, then waits for it |
 
-Reference only, no API call — these cannot honestly be demonstrated live, so they argue from
-numbers instead:
+Every card calls a real endpoint. Semantic Caching embeds with `gemini-embedding-001` and
+computes cosine similarity in the browser; FinOps measures one call per feature and
+attributes cost from what each actually spent:
 
 | Card | Shows |
 | --- | --- |
-| Semantic Caching | Reusing answers rather than tokens |
-| FinOps | Attribution and unit economics on top of the measurements |
+| Semantic Caching | Rewordings hitting a cache; a near-match correctly missing |
+| FinOps | Per-feature cost attribution from measured calls |
 
 Adding a lesson is a catalog change, not a UI change: demos live in
 [`web/demos.js`](web/demos.js) and every comparison card is the same renderer with a

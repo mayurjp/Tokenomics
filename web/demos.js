@@ -204,6 +204,59 @@ export const DEMOS = [
   },
 ];
 
+// Workloads for the FinOps card: deliberately different shapes, because that is what makes
+// per-request cost diverge from total spend.
+const TICKET = [
+  'Customer reports the export button on the reports page does nothing in Firefox. Console',
+  'shows a CORS error against the download host. Reproduced on 128.0 and 127.0. Works in',
+  'Chrome and Safari. Customer is on the enterprise plan and has escalated twice. Support',
+  'suggested clearing cache, no change. Engineering asked for a HAR file, customer supplied',
+  'one showing the preflight returning 403. Workaround offered: use Chrome. Customer says',
+  'their organisation standardises on Firefox and a workaround is not acceptable.',
+].join(' ');
+
+DEMOS.push(
+  {
+    id: 'semantic',
+    model: DEFAULT_MODEL,
+    variants: [
+      {
+        id: 'ask',
+        label: 'answer the question',
+        prompt: 'In two short sentences, how does a user reset a forgotten password on a typical web application?',
+        thinkingBudget: 0,
+      },
+    ],
+  },
+  {
+    id: 'finops',
+    model: DEFAULT_MODEL,
+    variants: [
+      {
+        id: 'summarizer',
+        label: 'Ticket summarizer',
+        prompt: `Summarize this support ticket in two lines for morning triage:
+
+${TICKET}`,
+        thinkingBudget: 0,
+      },
+      {
+        id: 'rewriter',
+        label: 'Search rewriter',
+        prompt: 'Rewrite this search query to be more precise. Reply with the query only: firefox export broken',
+        maxOutputTokens: 30,
+        thinkingBudget: 0,
+      },
+      {
+        id: 'chat',
+        label: 'Onboarding chat',
+        prompt: 'A new user asks how to get started with a reporting tool. Answer warmly and thoroughly in about two paragraphs.',
+        thinkingBudget: 0,
+      },
+    ],
+  }
+);
+
 export function findDemo(id) {
   return DEMOS.find((d) => d.id === id);
 }

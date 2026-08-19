@@ -112,6 +112,46 @@ export async function generate(demo, variant, apiKey) {
   };
 }
 
+// ---- Embeddings -----------------------------------------------------------
+//
+// What makes semantic caching demonstrable rather than merely describable: embed two
+// differently-worded questions, compare the vectors, and the similarity is a real measured
+// number rather than an assertion.
+
+export const EMBED_MODEL = 'gemini-embedding-001';
+const EMBED_DIMS = 768;
+
+export async function embed(text, apiKey) {
+  const parsed = await call(
+    `models/${EMBED_MODEL}:embedContent`,
+    {
+      model: `models/${EMBED_MODEL}`,
+      content: { parts: [{ text }] },
+      output_dimensionality: EMBED_DIMS,
+    },
+    apiKey
+  );
+
+  const values = parsed.embedding?.values ?? parsed.embeddings?.[0]?.values;
+  if (!Array.isArray(values)) throw new Error('Embedding response contained no vector.');
+  return values;
+}
+
+// Cosine similarity. Gemini's embeddings are not guaranteed unit-length at reduced
+// dimensionality, so normalise rather than assuming a plain dot product is the cosine.
+export function cosineSimilarity(a, b) {
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i += 1) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  if (na === 0 || nb === 0) return 0;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
+
 // ---- Batch ----------------------------------------------------------------
 //
 // Batch is the same model and the same tokens at half price, paid for in latency: Google

@@ -17,12 +17,12 @@
 import { el } from './dom.js';
 import { countAnything, samePriceComparisons } from './cards-count.js';
 import { runnerCard } from './cards-run.js';
-import { semanticCacheCard, finopsCard } from './cards-reference.js';
 import { batchCard } from './cards-batch.js';
+import { semanticCacheCard } from './cards-semantic.js';
+import { finopsCard } from './cards-finops.js';
 
 const count = (ctx) => ctx.countEndpoint ?? null;
 const gen = (demoId) => (ctx) => ctx.demos?.[demoId]?.variants?.[0]?.endpoint ?? null;
-const none = () => null;
 
 export const CARDS = [
   {
@@ -133,7 +133,7 @@ export const CARDS = [
     lesson: 'A reworded question can reuse a previous answer and skip the model entirely.',
     tradeoff:
       'A near-match is not a match. Too loose a threshold returns a confidently irrelevant answer, and the vector store plus per-lookup embedding calls are real infrastructure and real cost.',
-    endpoint: none,
+    endpoint: () => 'POST /v1beta/models/gemini-embedding-001:embedContent',
     mount: semanticCacheCard,
   },
   {
@@ -142,7 +142,7 @@ export const CARDS = [
     lesson: 'Attribution and unit economics, built on these numbers.',
     tradeoff:
       'It reduces nothing on its own. Attribution is work that buys visibility, not savings — the savings still have to come from the techniques above.',
-    endpoint: none,
+    endpoint: () => 'POST /v1beta/models/gemini-3.5-flash:generateContent',
     mount: finopsCard,
   },
 ];

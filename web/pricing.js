@@ -24,6 +24,15 @@ const FALLBACK = PRICES['gemini-3.5-flash'];
 
 export const BATCH_DISCOUNT = 0.5;
 
+// Embeddings are priced per input token and have no output. Cheap enough that a semantic
+// cache lookup costs a small fraction of the generation call it avoids — which is the
+// entire economic argument for one.
+export const EMBED_PER_M = 0.15;
+
+export function embedCost(tokens) {
+  return (tokens * EMBED_PER_M) / 1e6;
+}
+
 // The volume that makes these numbers mean something. One call costs a fraction of a cent;
 // the reason any of this matters is that production sends the same request over and over.
 export const RUNS_PER_MONTH = 10000;

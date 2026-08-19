@@ -1,20 +1,12 @@
-// Shell. Builds the context once, mounts the key panel, the tally and the cards.
+// Shell. Builds the context once, mounts the settings panel, the tally and the cards.
 // It knows nothing about what any card does.
 
 import { el } from './dom.js';
 import { getCatalog, isDemo, resetCaches } from './api.js';
 import { renderSession } from './session.js';
 import { renderKeyPanel } from './keypanel.js';
+import { getKey } from './keystore.js';
 import { CARDS, renderCard } from './cards.js';
-
-function banner() {
-  if (!isDemo()) return null;
-  return el('div', { class: 'demo-banner' }, [
-    el('strong', {}, 'Demo mode'),
-    ' — every number below is fabricated and nothing is being called. ',
-    'Add a key above to run these for real.',
-  ]);
-}
 
 function mountCards() {
   const catalog = getCatalog();
@@ -26,8 +18,37 @@ function mountCards() {
 }
 
 function paintBanner() {
-  const node = banner();
-  document.getElementById('demo-banner').replaceChildren(...(node ? [node] : []));
+  const host = document.getElementById('demo-banner');
+  if (!isDemo()) {
+    host.replaceChildren();
+    return;
+  }
+  host.replaceChildren(
+    el('div', { class: 'demo-banner' }, [
+      el('strong', {}, 'Demo mode'),
+      ' — every number below is fabricated and nothing is being called. Add a key in ',
+      el('button', { type: 'button', class: 'linklike' }, 'settings'),
+      ' to run these for real.',
+    ])
+  );
+  // The banner is the only pointer to the key panel now that the header is just a title,
+  // so it opens the same panel the gear does.
+  host.querySelector('button').addEventListener('click', () => setPanel(true));
+}
+
+const toggle = () => document.getElementById('settings-toggle');
+const panel = () => document.getElementById('keypanel');
+
+function setPanel(open) {
+  panel().hidden = !open;
+  toggle().setAttribute('aria-expanded', String(open));
+  if (open) panel().querySelector('input')?.focus();
+}
+
+// A dot on the gear is the only always-visible signal of which mode the page is in once
+// the banner is gone, so it has to track the key rather than being set once at load.
+function paintKeyDot() {
+  toggle().classList.toggle('has-key', Boolean(getKey()));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -39,10 +60,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const onKeyChange = () => {
     resetCaches();
     paintBanner();
+    paintKeyDot();
     mountCards();
   };
 
-  document.getElementById('keypanel').replaceChildren(renderKeyPanel(onKeyChange));
+  panel().replaceChildren(renderKeyPanel(onKeyChange));
+  toggle().addEventListener('click', () => setPanel(panel().hidden));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel().hidden) {
+      setPanel(false);
+      toggle().focus();
+    }
+  });
+
   paintBanner();
+  paintKeyDot();
   mountCards();
 });

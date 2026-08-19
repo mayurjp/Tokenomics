@@ -34,17 +34,15 @@ export function recordMeasure(result) {
 
 export function renderSession(el) {
   const body = el('div', { class: 'session-body' });
+  const section = el('section', { class: 'session', hidden: '' }, []);
 
   const paint = (s) => {
     const totalCalls = s.calls.count + s.calls.measure;
 
-    if (totalCalls === 0) {
-      body.replaceChildren(
-        el('p', { class: 'muted' },
-          'Nothing yet. Every number below is what this page really spent — it fills in as you use it.')
-      );
-      return;
-    }
+    // Nothing spent yet means nothing worth a panel. Landing on the page should show the
+    // cards, not a placeholder explaining a tally that has no numbers in it.
+    section.hidden = totalCalls === 0;
+    if (totalCalls === 0) return;
 
     const billedShare = s.billed.total
       ? Math.round((s.billed.thinking / s.billed.total) * 100)
@@ -69,12 +67,10 @@ export function renderSession(el) {
   };
 
   listeners.push(paint);
+  section.replaceChildren(el('h3', {}, 'This session'), body);
   paint(state);
 
-  return el('section', { class: 'session' }, [
-    el('h3', {}, 'This session'),
-    body,
-  ]);
+  return section;
 }
 
 function tile(el, value, label, note) {

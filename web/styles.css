@@ -31,12 +31,42 @@ body {
 
 main { max-width: 66rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
 
-h1 { font-size: 1.6rem; margin: 0 0 .5rem; }
+h1 { font-size: 1.6rem; margin: 0; }
+
+/* Scoped to the page header — .card-head is a <header> too, and a bare rule here leaks
+   a margin into every tile. */
+main > header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.5rem;
+}
+
+.icon-button {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.25rem; height: 2.25rem; padding: 0;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 8px;
+}
+.icon-button:hover { color: var(--fg); border-color: var(--accent); }
+.icon-button[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+
+/* The only always-visible signal of which mode the page is in once the banner is gone. */
+.key-dot {
+  position: absolute; top: -3px; right: -3px;
+  width: .5rem; height: .5rem; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--bg);
+  display: none;
+}
+.icon-button.has-key .key-dot { display: block; }
+
+.linklike {
+  padding: 0; background: none; border: 0; color: var(--accent);
+  font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer;
+}
 h2 { font-size: 1.15rem; margin: 0; }
 h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 .9rem; }
 h4 { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 1.25rem 0 .5rem; font-weight: 400; }
 
-.lede { margin: 0 0 1.5rem; color: var(--muted); max-width: 44rem; }
 .muted { color: var(--muted); }
 .error { color: var(--error); }
 .small { font-size: .85rem; }
@@ -198,6 +228,7 @@ details.prompts > summary { cursor: pointer; font-size: .85rem; color: var(--mut
   border: 1px solid var(--line); border-radius: 10px;
   padding: 1rem 1.25rem; margin-bottom: 1.25rem; background: var(--panel);
 }
+.keypanel[hidden] { display: none; }
 .key-row { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
 .key-opts { margin-top: .6rem; }
 .keypanel input[type="password"] {

@@ -21,7 +21,9 @@ public interface ILlmProvider
 
     // Models this key can actually call, restricted to ones that support text generation
     // (excludes embedding-only models etc.) — used to populate a model picker in the UI.
-    Task<IReadOnlyList<string>> ListModelsAsync(string apiKey, CancellationToken ct = default);
+    // Each entry carries a CapabilityScore proxy so callers can pick a "flagship" model
+    // per family without guessing from the name.
+    Task<IReadOnlyList<ModelInfo>> ListModelsAsync(string apiKey, CancellationToken ct = default);
 
     Task<MeasureResult> MeasureAsync(string apiKey, string model, string prompt, CancellationToken ct = default);
 }

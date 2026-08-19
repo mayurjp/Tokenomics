@@ -1,4 +1,5 @@
 @page "/settings"
+@using Tokenomics.Core.Models
 @using Tokenomics.Core.Providers
 @using Tokenomics.Core.Storage
 @inject ProviderRegistry ProviderRegistry
@@ -42,19 +43,33 @@
                 </p>
             }
 
-            @if (_modelsByProvider.TryGetValue(provider.ProviderId, out var models) && models.Count > 0)
+            @if (_visibleModelsByProvider.TryGetValue(provider.ProviderId, out var models) && models.Count > 0)
             {
                 <label class="form-label mt-3">Model</label>
                 <select class="form-select" @bind="_selectedModel[provider.ProviderId]" @bind:after="() => SaveSelectedModelAsync(provider)">
                     @foreach (var model in models)
                     {
-                        <option value="@model">@model</option>
+                        <option value="@model.Id">@model.Id</option>
                     }
                 </select>
             }
             else if (saved)
             {
                 <p class="text-muted mt-3">Using default model: @provider.DefaultModel (model list unavailable — @_modelListError.GetValueOrDefault(provider.ProviderId, "not loaded yet"))</p>
+            }
+
+            @if (_unavailableModelsByProvider.TryGetValue(provider.ProviderId, out var hidden) && hidden.Count > 0)
+            {
+                <p class="text-muted mt-3 mb-1">Hidden — quota exhausted last time they were tried:</p>
+                <ul class="list-unstyled small">
+                    @foreach (var model in hidden)
+                    {
+                        <li>
+                            @model.Id
+                            <button class="btn btn-link btn-sm p-0 ms-2" @onclick="() => RetryModelAsync(provider, model.Id)">retry</button>
+                        </li>
+                    }
+                </ul>
             }
         </div>
     </div>
@@ -65,16 +80,28 @@
     private readonly Dictionary<string, bool> _savedState = new();
     private readonly Dictionary<string, string> _messages = new();
     private readonly Dictionary<string, bool> _messageIsError = new();
-    private readonly Dictionary<string, List<string>> _modelsByProvider = new();
+    private readonly Dictionary<string, List<ModelInfo>> _allModelsByProvider = new();
+    private readonly Dictionary<string, List<ModelInfo>> _visibleModelsByProvider = new();
+    private readonly Dictionary<string, List<ModelInfo>> _unavailableModelsByProvider = new();
     private readonly Dictionary<string, string> _selectedModel = new();
     private readonly Dictionary<string, string> _modelListError = new();
     private readonly HashSet<string> _busy = new();
 
     protected override async Task OnInitializedAsync()
     {
+        // Seed every provider's dictionary entries synchronously, before any await runs.
+        // The markup's @foreach over ProviderRegistry.All is unconditional, and Blazor
+        // renders once as soon as this method hits its first await — if entries were
+        // added one provider at a time inside the loop below, that mid-method render
+        // would index a dictionary key for a provider not reached yet and throw.
         foreach (var provider in ProviderRegistry.All)
         {
             _keyInputs[provider.ProviderId] = string.Empty;
+            _selectedModel[provider.ProviderId] = string.Empty;
+        }
+
+        foreach (var provider in ProviderRegistry.All)
+        {
             var hasKey = await ApiKeyStore.HasKeyAsync(provider.ProviderId);
             _savedState[provider.ProviderId] = hasKey;
 
@@ -130,14 +157,20 @@
     {
         try
         {
-            var models = await provider.ListModelsAsync(apiKey);
-            _modelsByProvider[provider.ProviderId] = models.ToList();
+            var models = (await provider.ListModelsAsync(apiKey)).ToList();
+            var unavailable = await ProviderSettingsStore.GetUnavailableModelsAsync(provider.ProviderId);
+
+            _allModelsByProvider[provider.ProviderId] = models;
+            _unavailableModelsByProvider[provider.ProviderId] = models.Where(m => unavailable.Contains(m.Id)).ToList();
+            var visible = models.Where(m => !unavailable.Contains(m.Id)).ToList();
+            _visibleModelsByProvider[provider.ProviderId] = visible;
             _modelListError.Remove(provider.ProviderId);
 
+            var visibleIds = visible.Select(m => m.Id).ToList();
             var savedModel = await ProviderSettingsStore.GetSelectedModelAsync(provider.ProviderId);
-            _selectedModel[provider.ProviderId] = savedModel is not null && models.Contains(savedModel)
+            _selectedModel[provider.ProviderId] = savedModel is not null && visibleIds.Contains(savedModel)
                 ? savedModel
-                : models.Contains(provider.DefaultModel) ? provider.DefaultModel : models.FirstOrDefault() ?? provider.DefaultModel;
+                : visibleIds.Contains(provider.DefaultModel) ? provider.DefaultModel : visibleIds.FirstOrDefault() ?? provider.DefaultModel;
 
             // Persist the resolved default so Measure's read-side doesn't need its own fallback logic.
             await ProviderSettingsStore.SaveSelectedModelAsync(provider.ProviderId, _selectedModel[provider.ProviderId]);
@@ -145,6 +178,17 @@
         catch (Exception ex)
         {
             _modelListError[provider.ProviderId] = ex.Message;
+        }
+    }
+
+    private async Task RetryModelAsync(ILlmProvider provider, string model)
+    {
+        await ProviderSettingsStore.ClearUnavailableModelAsync(provider.ProviderId, model);
+
+        var apiKey = await ApiKeyStore.GetKeyAsync(provider.ProviderId);
+        if (apiKey is not null)
+        {
+            await LoadModelsAsync(provider, apiKey);
         }
     }
 
@@ -160,7 +204,9 @@
     {
         await ApiKeyStore.DeleteKeyAsync(provider.ProviderId);
         _savedState[provider.ProviderId] = false;
-        _modelsByProvider.Remove(provider.ProviderId);
+        _allModelsByProvider.Remove(provider.ProviderId);
+        _visibleModelsByProvider.Remove(provider.ProviderId);
+        _unavailableModelsByProvider.Remove(provider.ProviderId);
         SetMessage(provider.ProviderId, "Key cleared.", isError: false);
     }
 

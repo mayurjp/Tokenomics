@@ -84,6 +84,9 @@ public sealed class GeminiModelInfo
 
     [JsonPropertyName("supportedGenerationMethods")]
     public List<string>? SupportedGenerationMethods { get; init; }
+
+    [JsonPropertyName("inputTokenLimit")]
+    public int? InputTokenLimit { get; init; }
 }
 
 public sealed class GeminiErrorEnvelope

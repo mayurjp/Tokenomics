@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Tokenomics.Core.Models;
@@ -32,7 +33,7 @@ public sealed class GeminiProvider(HttpClient httpClient) : ILlmProvider
         }
     }
 
-    public async Task<IReadOnlyList<string>> ListModelsAsync(string apiKey, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(string apiKey, CancellationToken ct = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "models?pageSize=1000");
         request.Headers.Add("x-goog-api-key", apiKey);
@@ -50,13 +51,13 @@ public sealed class GeminiProvider(HttpClient httpClient) : ILlmProvider
             ?? throw new GeminiApiException("Gemini API returned an empty response");
 
         return parsed.Models?
-            .Where(m => m.SupportedGenerationMethods?.Contains("generateContent") == true)
-            .Select(m => m.Name?.StartsWith("models/", StringComparison.Ordinal) == true
-                ? m.Name["models/".Length..]
-                : m.Name)
-            .Where(name => !string.IsNullOrEmpty(name))
-            .Select(name => name!)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Where(m => m.SupportedGenerationMethods?.Contains("generateContent") == true && !string.IsNullOrEmpty(m.Name))
+            .Select(m =>
+            {
+                var id = m.Name!.StartsWith("models/", StringComparison.Ordinal) ? m.Name["models/".Length..] : m.Name!;
+                return new ModelInfo(id, m.InputTokenLimit);
+            })
+            .OrderBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
             .ToList()
             ?? [];
     }
@@ -79,8 +80,7 @@ public sealed class GeminiProvider(HttpClient httpClient) : ILlmProvider
 
         if (!response.IsSuccessStatusCode)
         {
-            var errorMessage = TryExtractErrorMessage(rawJson) ?? $"Gemini API request failed with status {(int)response.StatusCode}";
-            throw new GeminiApiException(errorMessage);
+            ThrowForError(rawJson, response.StatusCode);
         }
 
         var parsed = JsonSerializer.Deserialize<GeminiGenerateResponse>(rawJson)
@@ -109,6 +109,32 @@ public sealed class GeminiProvider(HttpClient httpClient) : ILlmProvider
         {
             return null;
         }
+    }
+
+    // RESOURCE_EXHAUSTED is the standard googleapis status for "no quota left" —
+    // distinct from other 4xx causes (bad key, bad request) that don't mean the
+    // model itself is unusable. Only that specific status should mark a model
+    // unavailable; everything else is a normal error.
+    private static void ThrowForError(string rawJson, HttpStatusCode statusCode)
+    {
+        GeminiErrorDetail? error = null;
+        try
+        {
+            error = JsonSerializer.Deserialize<GeminiErrorEnvelope>(rawJson)?.Error;
+        }
+        catch (JsonException)
+        {
+            // fall through — rawJson wasn't a parseable error envelope
+        }
+
+        var message = error?.Message ?? $"Gemini API request failed with status {(int)statusCode}";
+
+        if (statusCode == HttpStatusCode.TooManyRequests && error?.Status == "RESOURCE_EXHAUSTED")
+        {
+            throw new QuotaExceededException(message);
+        }
+
+        throw new GeminiApiException(message);
     }
 }
 

@@ -33,6 +33,13 @@ public sealed class SqliteProviderSettingsStore : IProviderSettingsStore
                 SelectedModel TEXT NOT NULL,
                 UpdatedAtUtc TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS UnavailableModels (
+                ProviderId TEXT NOT NULL,
+                Model TEXT NOT NULL,
+                MarkedAtUtc TEXT NOT NULL,
+                PRIMARY KEY (ProviderId, Model)
+            );
             """;
         command.ExecuteNonQuery();
     }
@@ -65,5 +72,50 @@ public sealed class SqliteProviderSettingsStore : IProviderSettingsStore
 
         var result = await command.ExecuteScalarAsync(ct);
         return result as string;
+    }
+
+    public async Task MarkModelUnavailableAsync(string providerId, string model, CancellationToken ct = default)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO UnavailableModels (ProviderId, Model, MarkedAtUtc)
+            VALUES ($providerId, $model, $markedAt)
+            ON CONFLICT(ProviderId, Model) DO UPDATE SET MarkedAtUtc = excluded.MarkedAtUtc;
+            """;
+        command.Parameters.AddWithValue("$providerId", providerId);
+        command.Parameters.AddWithValue("$model", model);
+        command.Parameters.AddWithValue("$markedAt", DateTime.UtcNow.ToString("O"));
+        await command.ExecuteNonQueryAsync(ct);
+    }
+
+    public async Task<IReadOnlySet<string>> GetUnavailableModelsAsync(string providerId, CancellationToken ct = default)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT Model FROM UnavailableModels WHERE ProviderId = $providerId;";
+        command.Parameters.AddWithValue("$providerId", providerId);
+
+        var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            results.Add((string)reader["Model"]);
+        }
+
+        return results;
+    }
+
+    public async Task ClearUnavailableModelAsync(string providerId, string model, CancellationToken ct = default)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM UnavailableModels WHERE ProviderId = $providerId AND Model = $model;";
+        command.Parameters.AddWithValue("$providerId", providerId);
+        command.Parameters.AddWithValue("$model", model);
+        await command.ExecuteNonQueryAsync(ct);
     }
 }

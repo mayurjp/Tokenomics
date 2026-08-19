@@ -9,17 +9,24 @@
 <h1>Token Economics Explorer</h1>
 <p class="text-muted">A1 — Measurement: type a prompt, see the real token breakdown.</p>
 
-@if (_hasKey == false)
+@if (_configuredProviders.Count == 0)
 {
     <div class="alert alert-warning">
-        No Gemini API key saved yet. Go to <a href="settings">Settings</a> to add one.
+        No API key saved yet. Go to <a href="settings">Settings</a> to add one.
     </div>
 }
 else
 {
-    <p class="text-muted">Model: @_model <a href="settings">(change)</a></p>
+    <label class="form-label fw-bold">Provider</label>
+    <select class="form-select" style="max-width: 20rem;" @bind="_selectedProviderId" @bind:after="OnProviderChangedAsync">
+        @foreach (var provider in _configuredProviders)
+        {
+            <option value="@provider.ProviderId">@provider.DisplayName</option>
+        }
+    </select>
+    <p class="text-muted mt-1">Model: @_model <a href="settings">(change)</a></p>
 
-    <label for="prompt" class="form-label fw-bold">Prompt</label>
+    <label for="prompt" class="form-label fw-bold mt-3">Prompt</label>
     <textarea id="prompt" class="form-control" rows="5" @bind="_prompt" placeholder="Type any prompt..."></textarea>
 
     <button class="btn btn-primary mt-3" @onclick="RunAsync" disabled="@_isRunning">
@@ -52,9 +59,8 @@ else
 }
 
 @code {
-    private const string ProviderId = "gemini";
-
-    private bool? _hasKey;
+    private readonly List<ILlmProvider> _configuredProviders = [];
+    private string _selectedProviderId = string.Empty;
     private string _model = string.Empty;
     private string _prompt = string.Empty;
     private bool _isRunning;
@@ -63,12 +69,27 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _hasKey = await ApiKeyStore.HasKeyAsync(ProviderId);
-        if (_hasKey == true)
+        foreach (var provider in ProviderRegistry.All)
         {
-            var provider = ProviderRegistry.Get(ProviderId);
-            _model = await ProviderSettingsStore.GetSelectedModelAsync(ProviderId) ?? provider.DefaultModel;
+            if (await ApiKeyStore.HasKeyAsync(provider.ProviderId))
+            {
+                _configuredProviders.Add(provider);
+            }
         }
+
+        if (_configuredProviders.Count > 0)
+        {
+            _selectedProviderId = _configuredProviders[0].ProviderId;
+            await LoadSelectedModelAsync();
+        }
+    }
+
+    private async Task OnProviderChangedAsync() => await LoadSelectedModelAsync();
+
+    private async Task LoadSelectedModelAsync()
+    {
+        var provider = ProviderRegistry.Get(_selectedProviderId);
+        _model = await ProviderSettingsStore.GetSelectedModelAsync(_selectedProviderId) ?? provider.DefaultModel;
     }
 
     private async Task RunAsync()
@@ -85,11 +106,16 @@ else
 
         try
         {
-            var apiKey = await ApiKeyStore.GetKeyAsync(ProviderId)
-                ?? throw new InvalidOperationException("No Gemini key saved — set one in Settings first.");
+            var apiKey = await ApiKeyStore.GetKeyAsync(_selectedProviderId)
+                ?? throw new InvalidOperationException("No key saved for this provider — set one in Settings first.");
 
-            var provider = ProviderRegistry.Get(ProviderId);
+            var provider = ProviderRegistry.Get(_selectedProviderId);
             _result = await provider.MeasureAsync(apiKey, _model, _prompt);
+        }
+        catch (QuotaExceededException ex)
+        {
+            await ProviderSettingsStore.MarkModelUnavailableAsync(_selectedProviderId, _model);
+            _errorMessage = $"{ex.Message} — {_model} has been marked unavailable and hidden from the picker in Settings (it can be un-hidden there if quota resets).";
         }
         catch (Exception ex)
         {

@@ -1,10 +1,9 @@
-// The demo catalog. Replaces the old single-workflow list.
+// The demo catalog. One demo is one lesson; its variants are the things being compared.
 //
-// A demo is one lesson. It owns a list of variants, and running a demo means running its
-// variants and comparing what they cost. Everything the model is asked to do lives here on
-// the server: the browser sends a demo id and a variant id, never prompt text or generation
-// options. That is what keeps this proxy from being a general purpose Gemini relay — a
-// caller who finds the endpoint can run these exact requests and nothing else.
+// This used to live server-side, where keeping prompts off the client stopped the proxy
+// being a general Gemini relay. With no server and the visitor's own key, that reasoning is
+// gone — there is nothing here a visitor could not already do with their own key, and the
+// prompts were always shown in the UI anyway.
 //
 // A variant may carry:
 //   prompt            required, the user turn
@@ -22,6 +21,8 @@ import {
   CHAT_SUMMARY,
   CHAT_QUESTION,
 } from './content.js';
+
+import { endpointPath } from './gemini.js';
 
 export const DEFAULT_MODEL = 'gemini-3.5-flash';
 
@@ -207,27 +208,27 @@ export function findDemo(id) {
   return DEMOS.find((d) => d.id === id);
 }
 
-export function findVariant(demo, id) {
-  return demo?.variants.find((v) => v.id === id);
-}
-
-// What the browser is allowed to see: everything. Prompts are public by design so a card
-// can show the user exactly what it is about to send.
-export function toPublicDemo(demo, endpointFor) {
+// The shape the cards consume. Endpoints are resolved here so a card can name the exact
+// Gemini endpoint behind it before anything has run.
+export function catalog(model) {
   return {
-    id: demo.id,
-    model: demo.model,
-    compare: demo.compare ?? 'total_tokens',
-    variants: demo.variants.map((v) => ({
-      id: v.id,
-      label: v.label,
-      model: v.model ?? demo.model,
-      endpoint: endpointFor(v.model ?? demo.model, 'generateContent'),
-      prompt: v.prompt,
-      systemInstruction: v.systemInstruction ?? null,
-      maxOutputTokens: v.maxOutputTokens ?? null,
-      json: v.json === true,
-      thinkingDisabled: v.thinkingBudget === 0,
+    countEndpoint: endpointPath(model ?? DEFAULT_MODEL, 'countTokens'),
+    demos: DEMOS.map((demo) => ({
+      id: demo.id,
+      model: demo.model,
+      compare: demo.compare ?? 'total_tokens',
+      variants: demo.variants.map((v) => ({
+        id: v.id,
+        label: v.label,
+        model: v.model ?? demo.model,
+        endpoint: endpointPath(v.model ?? demo.model, 'generateContent'),
+        prompt: v.prompt,
+        systemInstruction: v.systemInstruction ?? null,
+        maxOutputTokens: v.maxOutputTokens ?? null,
+        json: v.json === true,
+        thinkingBudget: v.thinkingBudget,
+        thinkingDisabled: v.thinkingBudget === 0,
+      })),
     })),
   };
 }

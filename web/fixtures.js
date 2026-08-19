@@ -1,14 +1,17 @@
 // Demo mode: fabricated data, no network, no API key, no quota.
 //
-// Enabled only by ?demo in the URL — never a default, and never silent. The page's whole
-// claim is that its numbers are real, so demo mode announces itself loudly.
+// This is what a visitor with no API key sees: the whole page, working, on invented
+// numbers. It is never silent — the banner says so on every card the numbers touch —
+// because the rest of the time the page's claim is that its numbers are real.
 //
 // The numbers below are anchored to real measurements taken from this key where we had
 // them (the comparison-pair counts, the thinking split) and are plausible reconstructions
 // where quota ran out before they could be measured. Either way, in demo mode they are
 // fabrications and the banner says so.
 
-export const DEMO = new URLSearchParams(location.search).has('demo');
+// ?demo forces fabricated data even when a key is present. Without a key the page is in
+// demo mode anyway — see api.js — so this is only needed to override a working key.
+export const FORCE_DEMO = new URLSearchParams(location.search).has('demo');
 
 const MODEL = 'gemini-3.5-flash';
 const gen = (m = MODEL) => `POST /v1beta/models/${m}:generateContent`;
@@ -116,9 +119,9 @@ const RUNS = {
   },
 };
 
-export async function demoCatalog() {
-  await latency(120);
-
+// Synchronous: with no server, the catalog is static data in both modes and there is
+// nothing to wait for.
+export function demoCatalog() {
   const demos = Object.entries(RUNS).map(([id, variants]) => ({
     id,
     model: MODEL,

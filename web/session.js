@@ -1,7 +1,7 @@
 // What this browser session has actually spent, accumulated as you click.
 //
-// The distinction the panel has to keep straight: tokens *counted* by /api/count were never
-// billed — countTokens does no inference. Tokens from /api/measure were. Merging the two
+// The distinction the panel has to keep straight: tokens *counted* by countTokens were never
+// billed — it does no inference. Tokens from generateContent were. Merging the two
 // into one "total tokens" number would be the single most misleading thing this page could
 // do, so they are tracked and shown separately.
 

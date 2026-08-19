@@ -8,8 +8,7 @@ at Gemini, and the page reports exactly what the API said it cost in tokens. Not
 estimated or counted locally.
 
 ```
-web/      # the static site — plain HTML/CSS/JS, no build step, no key
-worker/   # Cloudflare Worker that holds the Gemini API key
+web/      # the whole app — plain HTML/CSS/JS, no build step, no dependencies
 docs/     # design docs, one per phase
 ```
 
@@ -17,51 +16,46 @@ Fourteen cards, one lesson each, laid out as a grid you can scan at a glance. Cl
 expand it in place. Cards share no state and no ordering — each can be run, reordered or
 removed on its own.
 
-## Where the API key lives — and why not in the page
+## Where the API key lives
 
-The key is **not** in the site, encrypted or otherwise. A static page cannot keep a secret
-from its own visitors: anything the page can decrypt, so can anyone with devtools, and the
-outgoing `x-goog-api-key` header shows up in the Network tab regardless. Committing a key to
-a public repo also tends to get it found and auto-revoked by secret scanners.
+Nowhere. There is no server and no shared key.
 
-So the key lives in a small Cloudflare Worker as a host secret, and the browser only ever
-talks to that. Two further containments:
+The page calls `generativelanguage.googleapis.com` directly from the browser — Google sends
+CORS headers and accepts the preflighted `x-goog-api-key` POST, which is what makes a
+backend unnecessary. Each visitor pastes their own key; it is held in their browser and sent
+to exactly one place, Google.
 
-- **The browser never sends prompt text.** It sends a workflow id; the prompt is looked up
-  server-side in [`worker/src/workflows.js`](worker/src/workflows.js). Whoever finds the
-  endpoint can run these prompts and nothing else, against these models and nothing else.
-- **Rate limiting per IP**, because a key shared by every visitor is a bill shared by every
-  visitor.
+This removes every problem a shared key created: no quota split between strangers, no bill
+the site owner pays for someone else's clicking, and no secret that a static file was never
+able to keep anyway.
 
-Origin filtering is also in place, but it's a filter, not authentication — any non-browser
-client can set `Origin` to whatever it likes.
+What it does not remove: anything running in the page can read the key — browser extensions
+with page access, or any XSS bug here. So "remember on this device" is opt-in rather than
+the default (otherwise the key lives only until the tab closes), the key is never rendered
+in full, and the panel says to use a key restricted to the Generative Language API.
+
+Keys are validated with a `countTokens` call before being stored — no generation, no quota
+spent, and a wrong key fails immediately instead of on first use.
 
 ## Running it locally
-
-```
-cd worker
-npm install
-cp .dev.vars.example .dev.vars   # paste a Gemini key from aistudio.google.com
-npx wrangler dev                 # http://localhost:8787
-```
-
-Then serve the frontend against it in another terminal — `web/config.js` already points at
-`localhost:8787`:
 
 ```
 npx serve web
 ```
 
-Deploy steps, the API contract, and the pre-launch checklist are in
-[`worker/README.md`](worker/README.md). The site itself deploys to GitHub Pages via
-[`.github/workflows/pages.yml`](.github/workflows/pages.yml) on push to `main` — set the
-repo's Pages source to **GitHub Actions**, not "deploy from a branch".
+That is the whole thing — no build, no install, no key needed to look around. It deploys to
+GitHub Pages via [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on push to
+`main`; set the repo's Pages source to **GitHub Actions**, not "deploy from a branch".
 
 ## Demo mode
 
-Add `?demo` to the URL and the page runs on fabricated data: no API calls, no key, no quota.
-A banner says so, loudly and permanently, because the rest of the time the page's whole claim
-is that its numbers are real. Useful for working on the UI without spending anything.
+**With no key, the whole page works on fabricated numbers.** Every card runs, every
+comparison fills in, nothing is called. That is the default a first-time visitor gets, and
+it is why this is publishable without anyone's key being spent. A banner says so
+permanently, because the rest of the time the page's claim is that its numbers are real.
+
+Adding a key switches every card to live calls. `?demo` forces fabricated data back on even
+when a key is present — useful for working on the UI without spending quota.
 
 ## The cards
 
@@ -96,14 +90,15 @@ numbers instead:
 | FinOps | Attribution and unit economics on top of the measurements |
 
 Adding a lesson is a catalog change, not a UI change: demos live in
-[`worker/src/demos.js`](worker/src/demos.js) and every comparison card is the same renderer
-with a different demo id.
+[`web/demos.js`](web/demos.js) and every comparison card is the same renderer with a
+different demo id.
 
 ## A note on quota
 
-Gemini's free tier allows **20 `generateContent` requests per day, per model**. A public
-deployment sharing one key runs out fast, and the counting cards are effectively free while
-the generation cards are the scarce resource. `?demo` exists partly for this reason.
+Gemini's free tier allows **20 `generateContent` requests per day, per model**. Since every
+visitor brings their own key, that limit is theirs rather than shared — but it is still
+small: clicking through every generation card costs roughly 17 of the 20. Counting cards use
+`countTokens`, which does no inference and has a far larger allowance.
 
 ## A note on the design docs
 

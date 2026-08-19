@@ -192,3 +192,28 @@ details.prompts > summary { cursor: pointer; font-size: .85rem; color: var(--mut
 .ref-table tbody th { font-weight: 500; }
 .ref-table td { font-variant-numeric: tabular-nums; }
 .source { margin-top: 1rem; font-style: italic; }
+
+/* ---- key panel ---- */
+.keypanel {
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 1rem 1.25rem; margin-bottom: 1.25rem; background: var(--panel);
+}
+.key-row { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.key-opts { margin-top: .6rem; }
+.keypanel input[type="password"] {
+  flex: 1 1 18rem; min-width: 0;
+  padding: .55rem .75rem;
+  border: 1px solid var(--line); border-radius: 7px;
+  background: var(--bg); color: var(--fg);
+  font: .9rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.keypanel input[type="password"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.keypanel p { margin: .9rem 0 0; max-width: 46rem; }
+.key-status { font-size: .85rem; }
+.key-status.error { color: var(--error); }
+
+.key-live { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+.key-live code { font-size: .85rem; padding: .1rem .35rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
+
+button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; }
+button.ghost:hover { color: var(--fg); border-color: var(--accent); }

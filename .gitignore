@@ -26,7 +26,8 @@ appsettings.*.local.json
 Thumbs.db
 .DS_Store
 
-# Cloudflare Worker local secrets — the Gemini key lives here in dev, never in-tree.
+# No server and no shared key any more — the visitor brings their own, held in their
+# browser. Kept ignored so a stray local secrets file can never be committed.
 .dev.vars
 
 # Node

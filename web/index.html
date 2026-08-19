@@ -11,24 +11,24 @@
       <header>
         <h1>Token Economics Explorer</h1>
         <p class="lede">
-          One card, one lesson. Every number comes from a real Gemini API call — the
-          endpoint behind each card is named on it.
+          One card, one lesson. Add your own Gemini key to run them for real, or explore
+          on fabricated numbers first. The endpoint behind each card is named on it.
         </p>
       </header>
 
+      <section id="keypanel"></section>
       <div id="demo-banner"></div>
       <section id="session"></section>
       <section id="cards"><p class="muted">Loading&hellip;</p></section>
 
       <footer>
         <p class="muted">
-          The API key is not in this page. Calls go through a small server-side proxy that
-          holds the key — a static site cannot keep a secret from its own visitors.
+          Entirely static and entirely client-side. There is no server and no shared key:
+          your key stays in your browser and is sent only to Google.
         </p>
       </footer>
     </main>
 
-    <script src="config.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

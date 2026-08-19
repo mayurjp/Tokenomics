@@ -1,44 +1,42 @@
-// Every call to the proxy goes through here, so counting, caching and error handling
-// are defined once instead of per card.
+// The one place cards get data from. No server: either the visitor's key calls Gemini
+// directly, or demo mode serves fabricated numbers.
+//
+// Mode is decided by whether a key is present, not by a setting. A visitor with no key gets
+// a fully working page on fabricated data — which is what makes this publishable without
+// anyone's key being spent — and adding a key switches every card to real calls.
 
 import { recordCount, recordMeasure } from './session.js';
-import { DEMO, demoCatalog, demoCount, demoMeasure } from './fixtures.js';
+import { FORCE_DEMO, demoCatalog, demoCount, demoMeasure } from './fixtures.js';
+import { catalog as liveCatalog, findDemo } from './demos.js';
+import { countTokens as geminiCount, generate, MissingKeyError } from './gemini.js';
+import { getKey } from './keystore.js';
+import { DEFAULT_MODEL } from './demos.js';
 
-const API_BASE = (window.API_BASE || '').replace(/\/$/, '');
+export { MissingKeyError };
 
-async function post(path, body) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const parsed = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(parsed?.error || `Request failed with status ${response.status}`);
-  }
-  return parsed;
+export function isDemo() {
+  return FORCE_DEMO || !getKey();
 }
 
-export async function getCatalog() {
-  if (DEMO) return demoCatalog();
-
-  const response = await fetch(`${API_BASE}/api/demos`);
-  const parsed = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(parsed?.error || `Request failed with status ${response.status}`);
-  }
-  return parsed;
+export function getCatalog() {
+  return isDemo() ? demoCatalog() : liveCatalog(DEFAULT_MODEL);
 }
 
 // A given string always tokenizes to the same number, so asking twice is waste. Promises
 // are cached rather than values, so parallel counts of the same text collapse into one
 // request; failures are evicted so they stay retryable.
-const countCache = new Map();
+let countCache = new Map();
+
+// Switching between demo numbers and real ones must not serve stale answers from the other
+// mode — the cache is keyed by text alone, so it has to be dropped when the mode changes.
+export function resetCaches() {
+  countCache = new Map();
+}
 
 export function countTokens(text) {
   if (countCache.has(text)) return countCache.get(text);
 
-  const pending = (DEMO ? demoCount(text) : post('/api/count', { text }))
+  const pending = (isDemo() ? demoCount(text) : geminiCount(text, DEFAULT_MODEL))
     .then((result) => {
       recordCount(result);
       return result;
@@ -54,9 +52,17 @@ export function countTokens(text) {
 
 // Deliberately not cached: the point of a measurement is that it really ran.
 export async function measure(demoId, variantId) {
-  const result = DEMO
-    ? await demoMeasure(demoId, variantId)
-    : await post('/api/measure', { demoId, variantId });
+  let result;
+
+  if (isDemo()) {
+    result = await demoMeasure(demoId, variantId);
+  } else {
+    const demo = findDemo(demoId);
+    const variant = demo?.variants.find((v) => v.id === variantId);
+    if (!variant) throw new Error(`Unknown demo variant: ${demoId}/${variantId}`);
+    result = await generate(demo, variant);
+  }
+
   recordMeasure(result);
   return result;
 }

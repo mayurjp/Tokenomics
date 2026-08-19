@@ -5,7 +5,6 @@
 // a fully working page on fabricated data — which is what makes this publishable without
 // anyone's key being spent — and adding a key switches every card to real calls.
 
-import { recordCount, recordMeasure } from './session.js';
 import { FORCE_DEMO, demoCatalog, demoCount, demoMeasure } from './fixtures.js';
 import { catalog as liveCatalog, findDemo } from './demos.js';
 import { countTokens as geminiCount, generate, MissingKeyError } from './gemini.js';
@@ -37,10 +36,6 @@ export function countTokens(text) {
   if (countCache.has(text)) return countCache.get(text);
 
   const pending = (isDemo() ? demoCount(text) : geminiCount(text, DEFAULT_MODEL))
-    .then((result) => {
-      recordCount(result);
-      return result;
-    })
     .catch((err) => {
       countCache.delete(text);
       throw err;
@@ -52,17 +47,10 @@ export function countTokens(text) {
 
 // Deliberately not cached: the point of a measurement is that it really ran.
 export async function measure(demoId, variantId) {
-  let result;
+  if (isDemo()) return demoMeasure(demoId, variantId);
 
-  if (isDemo()) {
-    result = await demoMeasure(demoId, variantId);
-  } else {
-    const demo = findDemo(demoId);
-    const variant = demo?.variants.find((v) => v.id === variantId);
-    if (!variant) throw new Error(`Unknown demo variant: ${demoId}/${variantId}`);
-    result = await generate(demo, variant);
-  }
-
-  recordMeasure(result);
-  return result;
+  const demo = findDemo(demoId);
+  const variant = demo?.variants.find((v) => v.id === variantId);
+  if (!variant) throw new Error(`Unknown demo variant: ${demoId}/${variantId}`);
+  return generate(demo, variant);
 }

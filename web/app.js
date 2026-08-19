@@ -3,7 +3,6 @@
 
 import { el } from './dom.js';
 import { getCatalog, isDemo, resetCaches } from './api.js';
-import { renderSession, resetSession } from './session.js';
 import { renderKeyPanel } from './keypanel.js';
 import { getKey } from './keystore.js';
 import { CARDS, renderCard } from './cards.js';
@@ -52,14 +51,11 @@ function paintKeyDot() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('session').replaceChildren(renderSession(el));
-
   // Switching modes rebuilds every card from scratch. Half-rendered results from the other
   // mode would be worse than losing them: fabricated numbers sitting next to real ones,
   // with nothing on screen saying which was which.
   const onKeyChange = () => {
     resetCaches();
-    resetSession();
     paintBanner();
     paintKeyDot();
     mountCards();

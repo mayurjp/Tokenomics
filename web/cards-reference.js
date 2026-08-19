@@ -9,13 +9,9 @@
 // 2026-08-19, for gemini-3.5-flash. They change — re-check before relying on them.
 
 import { el } from './dom.js';
+import { priceFor, usd, PRICING_DATE, BATCH_DISCOUNT } from './pricing.js';
 
-const PRICING_DATE = '19 August 2026';
-const INPUT_PER_M = 1.5;
-const OUTPUT_PER_M = 9.0;
-
-const usd = (n) =>
-  n >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(3)}`;
+const { in: INPUT_PER_M, out: OUTPUT_PER_M } = priceFor('gemini-3.5-flash');
 
 function table(rows, headers) {
   return el('table', { class: 'ref-table' }, [
@@ -39,7 +35,7 @@ export function batchCard(body) {
   const outTok = 250;
 
   const standard = (requests * inTok * INPUT_PER_M + requests * outTok * OUTPUT_PER_M) / 1e6;
-  const batch = standard / 2;
+  const batch = standard * (1 - BATCH_DISCOUNT);
 
   body.replaceChildren(
     el('p', {}, `100,000 requests of ${inTok} input and ${outTok} output tokens, on gemini-3.5-flash:`),
@@ -47,7 +43,7 @@ export function batchCard(body) {
       [
         ['Interactive', usd(standard), 'answer in seconds'],
         ['Batch', usd(batch), 'answer within hours'],
-        ['Saved', usd(standard - batch), '50% off input and output'],
+        ['Saved', usd(standard - batch), `${BATCH_DISCOUNT * 100}% off input and output`],
       ],
       ['', 'Cost', 'Latency']
     ),

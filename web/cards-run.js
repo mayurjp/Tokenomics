@@ -6,6 +6,8 @@
 
 import { el } from './dom.js';
 import { measure } from './api.js';
+import { createMeter } from './meter.js';
+import { costOf, atVolume, usd, isPriced, RUNS_PER_MONTH, PRICING_DATE } from './pricing.js';
 
 const METRIC_LABEL = {
   input_tokens: 'input tokens',
@@ -50,9 +52,15 @@ function variantColumn(variant, outcome, highlight) {
   }
 
   const r = outcome.result;
+  const cost = costOf(r.stats, r.model);
   return el('div', { class: 'pair-side' }, [
     ...head,
     statsTable(r.stats, highlight),
+    el('p', { class: 'cost' }, [
+      el('strong', {}, usd(atVolume(cost))),
+      el('span', { class: 'muted' }, ` / month at ${RUNS_PER_MONTH.toLocaleString()} runs`),
+      el('span', { class: 'muted small block' }, `${usd(cost)} per call${isPriced(r.model) ? '' : ' — price estimated'}`),
+    ]),
     r.truncated ? el('p', { class: 'badge-inline' }, 'truncated by the output cap') : null,
     el('h4', {}, 'Response'),
     el('pre', { class: 'response small' }, r.response_text || '(empty)'),
@@ -87,6 +95,40 @@ function summary(demo, outcomes) {
   return `${best.label} used ${pct}% fewer ${METRIC_LABEL[metric] ?? metric} — ${worst.n.toLocaleString()} down to ${best.n.toLocaleString()}.`;
 }
 
+// Tokens are the mechanism; money is the reason anyone cares. Everything here is
+// hypothetical — the free tier bills nothing — so it is framed as what this work would cost
+// if it ran in production, at a volume where the difference is legible.
+function moneyLine(demo, outcomes) {
+  const ok = demo.variants
+    .map((v, i) => ({ variant: v, ...outcomes[i] }))
+    .filter((o) => o.result);
+
+  if (ok.length < 2) return null;
+
+  const costs = ok.map((o) => ({
+    label: o.variant.label,
+    monthly: atVolume(costOf(o.result.stats, o.result.model)),
+  }));
+
+  const best = costs.reduce((a, b) => (b.monthly < a.monthly ? b : a));
+  const worst = costs.reduce((a, b) => (b.monthly > a.monthly ? b : a));
+  const saved = worst.monthly - best.monthly;
+
+  if (saved <= 0) return null;
+
+  return el('p', { class: 'money' }, [
+    el('span', {}, `At ${RUNS_PER_MONTH.toLocaleString()} runs a month, ${worst.label} costs `),
+    el('strong', {}, usd(worst.monthly)),
+    el('span', {}, ` and ${best.label} costs `),
+    el('strong', {}, usd(best.monthly)),
+    el('span', {}, ' — a saving of '),
+    el('strong', {}, usd(saved)),
+    el('span', {}, ' a month.'),
+    el('span', { class: 'muted small block' },
+      `Hypothetical: paid-tier list prices as of ${PRICING_DATE}. The free tier bills nothing.`),
+  ]);
+}
+
 export function runnerCard(demoId, options = {}) {
   return function mount(body, ctx) {
     const demo = ctx.demos?.[demoId];
@@ -96,6 +138,7 @@ export function runnerCard(demoId, options = {}) {
     }
 
     const out = el('div', { class: 'output' });
+    const meter = createMeter();
     const button = el('button', { type: 'button' }, options.runLabel ?? 'Run');
 
     // The prompts are what the demo is actually about, so they are inspectable — but they
@@ -128,10 +171,14 @@ export function runnerCard(demoId, options = {}) {
       // Sequential, never parallel. Two identical prompts in flight at once is exactly the
       // shape that breaks the caching demo, and ordering matters wherever one call is meant
       // to warm something up for the next.
+      // Each run reports its own cost, so the number stays next to the thing that caused it.
+      meter.reset();
       const outcomes = [];
       for (const variant of demo.variants) {
         try {
-          outcomes.push({ result: await measure(demo.id, variant.id) });
+          const result = await measure(demo.id, variant.id);
+          meter.add(result);
+          outcomes.push({ result });
         } catch (err) {
           // One unreachable model tier must not sink the whole comparison.
           outcomes.push({ error: err.message });
@@ -139,6 +186,7 @@ export function runnerCard(demoId, options = {}) {
       }
 
       const line = summary(demo, outcomes);
+      const money = moneyLine(demo, outcomes);
       // replaceChildren stringifies a null into the text "null" — unlike el(), which skips
       // it. Anything conditional has to be filtered out before it gets here.
       out.replaceChildren(
@@ -146,6 +194,7 @@ export function runnerCard(demoId, options = {}) {
           el('div', { class: 'pair-grid' },
             demo.variants.map((v, i) => variantColumn(v, outcomes[i], demo.compare))),
           line ? el('p', { class: 'savings' }, line) : null,
+          money,
           outcomes.every((o) => o.error)
             ? el('p', { class: 'error small' }, 'Every variant failed — check the key and its quota.')
             : null,
@@ -156,6 +205,6 @@ export function runnerCard(demoId, options = {}) {
       button.textContent = options.runLabel ?? 'Run';
     });
 
-    body.replaceChildren(details, el('div', { class: 'controls' }, [button]), out);
+    body.replaceChildren(details, el('div', { class: 'controls' }, [button]), out, meter.node);
   };
 }

@@ -265,3 +265,7 @@ button.ghost:hover { color: var(--fg); border-color: var(--accent); }
 details.tradeoff { margin-top: 1.25rem; padding-top: .9rem; border-top: 1px solid var(--line); }
 details.tradeoff > summary { cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--muted); }
 details.tradeoff p { margin: .6rem 0 0; font-size: .9rem; color: var(--muted); max-width: 44rem; }
+
+.batch-status { margin-top: 1rem; }
+.batch-status p { margin: 0 0 .35rem; }
+.batch-status code { font-size: .8rem; }

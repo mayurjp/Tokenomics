@@ -179,6 +179,44 @@ const PROMPTS = {
   compression: '[12 turns of conversation]\n\nGiven all of that, what should we do first this week?',
 };
 
+// A batch job in demo mode. The state machine is the real one — queued, running, finished
+// — but compressed to seconds. A demo that genuinely took an hour would teach the lesson
+// and lose the visitor; the card says the real turnaround separately.
+const DEMO_BATCH_MS = 12000;
+
+export async function demoBatchCreate() {
+  await latency(500);
+  return { name: `batches/demo-${Date.now().toString(36)}`, model: MODEL };
+}
+
+export async function demoBatchPoll(job) {
+  const age = Date.now() - job.startedAt;
+
+  if (age < DEMO_BATCH_MS * 0.35) {
+    return { state: 'JOB_STATE_PENDING', done: false, failed: false };
+  }
+  if (age < DEMO_BATCH_MS) {
+    return { state: 'JOB_STATE_RUNNING', done: false, failed: false };
+  }
+
+  return {
+    state: 'JOB_STATE_SUCCEEDED',
+    done: true,
+    failed: false,
+    error: null,
+    response_text: ANSWER_LONG,
+    stats: {
+      input_tokens: 36,
+      output_tokens: 268,
+      total_tokens: 304,
+      cache_read_tokens: null,
+      cache_write_tokens: null,
+      reasoning_tokens: null,
+    },
+    demo: true,
+  };
+}
+
 export async function demoMeasure(demoId, variantId) {
   const spec = RUNS[demoId]?.[variantId];
   await latency(spec?.thinking ? 1100 : 600);

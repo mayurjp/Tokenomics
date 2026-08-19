@@ -79,13 +79,13 @@ Backed by `generateContent` — these really run the model:
 | Structured Output | The same extraction as prose and as JSON |
 | Retrieval vs Stuffing | Whole document vs the one relevant section |
 | Context Compression | Full history vs a summary |
+| Batch API | Submits a real batch job, then waits for it |
 
 Reference only, no API call — these cannot honestly be demonstrated live, so they argue from
 numbers instead:
 
 | Card | Shows |
 | --- | --- |
-| Batch API | Half price for work nobody is waiting for |
 | Semantic Caching | Reusing answers rather than tokens |
 | FinOps | Attribution and unit economics on top of the measurements |
 

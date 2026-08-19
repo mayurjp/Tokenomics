@@ -112,6 +112,85 @@ export async function generate(demo, variant, apiKey) {
   };
 }
 
+// ---- Batch ----------------------------------------------------------------
+//
+// Batch is the same model and the same tokens at half price, paid for in latency: Google
+// targets 24 hours and usually beats it, but nothing guarantees a fast turnaround. That is
+// exactly why this is worth running rather than describing — the wait is the lesson.
+
+export async function createBatch(prompt, model, displayName, apiKey) {
+  const parsed = await call(
+    `models/${model}:batchGenerateContent`,
+    {
+      batch: {
+        display_name: displayName,
+        input_config: {
+          requests: {
+            requests: [
+              { request: { contents: [{ parts: [{ text: prompt }] }] }, metadata: { key: 'demo-1' } },
+            ],
+          },
+        },
+      },
+    },
+    apiKey
+  );
+
+  const name = parsed.name ?? parsed.batch?.name;
+  if (!name) throw new Error('Batch was created but the API returned no job name.');
+  return { name, model };
+}
+
+export async function getBatch(name, apiKey) {
+  const key = apiKey ?? getKey();
+  if (!key) throw new MissingKeyError();
+
+  const response = await fetch(`${BASE}${name}`, { headers: { 'x-goog-api-key': key } });
+  const raw = await response.text();
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // fall through
+  }
+
+  if (!response.ok) {
+    throw new Error(parsed?.error?.message ?? `Could not read batch job (status ${response.status})`);
+  }
+  return normalizeBatch(parsed);
+}
+
+// The batch payload has moved between shapes across API revisions, and the docs do not pin
+// down where inline responses land. Rather than guess one path and break silently, look in
+// each plausible place and report honestly when nothing is found.
+function normalizeBatch(job) {
+  const state = job?.metadata?.state ?? job?.state ?? 'JOB_STATE_UNSPECIFIED';
+
+  const inlined =
+    job?.response?.inlinedResponses?.inlinedResponses ??
+    job?.response?.inlinedResponses ??
+    job?.dest?.inlinedResponses?.inlinedResponses ??
+    job?.dest?.inlinedResponses ??
+    [];
+
+  const first = Array.isArray(inlined) ? inlined[0] : null;
+  const inner = first?.response ?? first;
+  const candidate = inner?.candidates?.[0];
+
+  return {
+    name: job?.name,
+    state,
+    done: state === 'JOB_STATE_SUCCEEDED' || state === 'JOB_STATE_FAILED' || job?.done === true,
+    failed: state === 'JOB_STATE_FAILED' || state === 'JOB_STATE_EXPIRED' || state === 'JOB_STATE_CANCELLED',
+    error: job?.error?.message ?? null,
+    response_text: candidate?.content?.parts?.map((p) => p.text ?? '').join('') ?? '',
+    // Whether batch returns usage per response is undocumented; if it is absent the UI says
+    // "not reported" rather than inventing a zero.
+    stats: inner?.usageMetadata ? toTokenStats(inner.usageMetadata) : null,
+  };
+}
+
 // Cheapest possible round trip that proves a key works: no generation, no quota spent.
 export async function validateKey(apiKey, model) {
   await countTokens('ok', model, apiKey);

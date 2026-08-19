@@ -1,15 +1,15 @@
-// Reference cards: the three Tier C topics that cannot honestly be demonstrated live.
+// Reference cards: the two Tier C topics that cannot honestly be demonstrated live.
 //
-// Batch results arrive hours later, semantic caching needs a vector store, and FinOps is an
-// aggregation discipline rather than a request-level technique. Faking any of them with a
-// live-looking button would teach the wrong thing, so these state their case in numbers and
-// say plainly that nothing is being called.
+// Semantic caching needs a vector store, and FinOps is an aggregation discipline rather than
+// a request-level technique. Faking either with a live-looking button would teach the wrong
+// thing, so these state their case in numbers and say plainly that nothing is being called.
+// (Batch used to be here too — it turns out to be genuinely runnable; see cards-batch.js.)
 //
 // Prices are Gemini list prices checked against ai.google.dev/gemini-api/docs/pricing on
 // 2026-08-19, for gemini-3.5-flash. They change — re-check before relying on them.
 
 import { el } from './dom.js';
-import { priceFor, usd, PRICING_DATE, BATCH_DISCOUNT } from './pricing.js';
+import { priceFor, usd } from './pricing.js';
 
 const { in: INPUT_PER_M, out: OUTPUT_PER_M } = priceFor('gemini-3.5-flash');
 
@@ -24,36 +24,6 @@ function table(rows, headers) {
 
 function sourceNote(text) {
   return el('p', { class: 'muted small source' }, text);
-}
-
-// ---- C1: batch ------------------------------------------------------------
-export function batchCard(body) {
-  // A concrete workload rather than an abstract percentage: 100k requests is where the
-  // decision actually starts to matter.
-  const requests = 100000;
-  const inTok = 800;
-  const outTok = 250;
-
-  const standard = (requests * inTok * INPUT_PER_M + requests * outTok * OUTPUT_PER_M) / 1e6;
-  const batch = standard * (1 - BATCH_DISCOUNT);
-
-  body.replaceChildren(
-    el('p', {}, `100,000 requests of ${inTok} input and ${outTok} output tokens, on gemini-3.5-flash:`),
-    table(
-      [
-        ['Interactive', usd(standard), 'answer in seconds'],
-        ['Batch', usd(batch), 'answer within hours'],
-        ['Saved', usd(standard - batch), `${BATCH_DISCOUNT * 100}% off input and output`],
-      ],
-      ['', 'Cost', 'Latency']
-    ),
-    el('p', { class: 'savings' },
-      'Batch is the same model and the same tokens at half price. The only thing traded away is ' +
-      'latency, which costs nothing on work no human is waiting for.'),
-    el('p', { class: 'muted small' },
-      'Suits bulk classification, backfills and offline analysis. Useless for chat.'),
-    sourceNote(`List prices for gemini-3.5-flash, checked ${PRICING_DATE}. Verify before relying on them.`)
-  );
 }
 
 // ---- C2: semantic caching -------------------------------------------------

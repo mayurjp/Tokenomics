@@ -17,7 +17,8 @@
 import { el } from './dom.js';
 import { countAnything, samePriceComparisons } from './cards-count.js';
 import { runnerCard } from './cards-run.js';
-import { batchCard, semanticCacheCard, finopsCard } from './cards-reference.js';
+import { semanticCacheCard, finopsCard } from './cards-reference.js';
+import { batchCard } from './cards-batch.js';
 
 const count = (ctx) => ctx.countEndpoint ?? null;
 const gen = (demoId) => (ctx) => ctx.demos?.[demoId]?.variants?.[0]?.endpoint ?? null;
@@ -120,10 +121,10 @@ export const CARDS = [
   {
     id: 'batch-api',
     title: 'Batch API',
-    lesson: 'Work nobody is waiting for is billed at half price.',
+    lesson: 'Work nobody is waiting for is billed at half price — if you can wait for it.',
     tradeoff:
       'Results arrive within hours, not seconds. Useless for anything a person is waiting on, and it adds a job-submission and result-collection path to build.',
-    endpoint: none,
+    endpoint: () => 'POST /v1beta/models/gemini-3.5-flash:batchGenerateContent',
     mount: batchCard,
   },
   {

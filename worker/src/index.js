@@ -10,6 +10,14 @@ import { toTokenStats } from './tokenStats.js';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/';
 
+// The token counter is the one endpoint that takes arbitrary caller text, which costs the
+// proxy its "can only ever run our own prompts" property. Two things keep that acceptable:
+// countTokens does no generation (so there is no output bill to run up), and the input is
+// capped here. The cap is on characters, not tokens — we can't know the token count until
+// after the call, which is the whole point of the endpoint.
+const MAX_COUNT_CHARS = 8000;
+const COUNT_MODEL = 'gemini-3.5-flash';
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin');
@@ -28,6 +36,10 @@ export default {
 
       if (request.method === 'POST' && url.pathname === '/api/measure') {
         return await handleMeasure(request, env, origin, cors);
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/count') {
+        return await handleCount(request, env, origin, cors);
       }
 
       return json({ error: 'Not found' }, 404, cors);
@@ -71,22 +83,92 @@ async function handleMeasure(request, env, origin, cors) {
     return json({ error: `Unknown workflow: ${String(body?.workflowId ?? '')}` }, 400, cors);
   }
 
-  const result = await measure(workflow, env.GEMINI_API_KEY);
+  // The only caller-controlled knob, and deliberately a boolean rather than a passthrough
+  // of generationConfig — the caller picks between two fixed shapes, it doesn't get to
+  // compose arbitrary requests. Defaults to the model's own behavior (thinking on).
+  const thinking = body?.thinking !== false;
+  if (thinking && !workflow.supportsThinkingToggle && body?.thinking !== undefined) {
+    return json({ error: 'This workflow does not support the thinking toggle' }, 400, cors);
+  }
+
+  const result = await measure(workflow, env.GEMINI_API_KEY, thinking);
   return json(result.body, result.status, cors);
+}
+
+async function handleCount(request, env, origin, cors) {
+  if (!isAllowedOrigin(origin, env)) {
+    return json({ error: 'Origin not allowed' }, 403, cors);
+  }
+  if (!env.GEMINI_API_KEY) {
+    console.error('GEMINI_API_KEY is not configured');
+    return json({ error: 'Server is not configured' }, 500, cors);
+  }
+
+  const limited = await checkRateLimit(request, env);
+  if (limited) {
+    return json({ error: limited }, 429, cors);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Request body must be JSON' }, 400, cors);
+  }
+
+  const text = body?.text;
+  if (typeof text !== 'string' || text.length === 0) {
+    return json({ error: 'text is required' }, 400, cors);
+  }
+  if (text.length > MAX_COUNT_CHARS) {
+    return json({ error: `text is limited to ${MAX_COUNT_CHARS} characters` }, 400, cors);
+  }
+
+  const response = await fetch(`${GEMINI_BASE}models/${COUNT_MODEL}:countTokens`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+    body: JSON.stringify({ contents: [{ parts: [{ text }] }] }),
+  });
+
+  const raw = await response.text();
+  let parsed = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // fall through — not JSON
+  }
+
+  if (!response.ok) {
+    const message = parsed?.error?.message ?? `countTokens failed with status ${response.status}`;
+    return json({ error: message }, response.status === 429 ? 429 : 502, cors);
+  }
+
+  return json(
+    { model: COUNT_MODEL, tokens: parsed?.totalTokens ?? null, chars: text.length },
+    200,
+    cors
+  );
 }
 
 // One generateContent call. Errors map Gemini's own error.message through — never the
 // raw upstream body, which can carry request detail we don't want to hand out.
-async function measure(workflow, apiKey) {
+async function measure(workflow, apiKey, thinking) {
+  const requestBody = { contents: [{ parts: [{ text: workflow.prompt }] }] };
+
+  // thinkingBudget: 0 is the switch that actually turns thinking off, and it's the portable
+  // one: thinkingLevel 'minimal' is rejected outright by some 3.x models. Note the budget is
+  // a hint, not a cap — a non-zero budget is routinely overshot. 0 is honored.
+  if (!thinking) {
+    requestBody.generationConfig = { thinkingConfig: { thinkingBudget: 0 } };
+  }
+
   const response = await fetch(`${GEMINI_BASE}models/${workflow.model}:generateContent`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-goog-api-key': apiKey,
     },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: workflow.prompt }] }],
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   const rawText = await response.text();
@@ -123,6 +205,7 @@ async function measure(workflow, apiKey) {
     status: 200,
     body: {
       model: workflow.model,
+      thinking,
       response_text: text,
       stats: toTokenStats(usage),
       raw: usage,

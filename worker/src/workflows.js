@@ -16,6 +16,9 @@ export const WORKFLOWS = [
       'Fires one fixed prompt at Gemini and reports exactly what the API said it cost, ' +
       'in tokens. Nothing is estimated or counted locally.',
     model: 'gemini-3.5-flash',
+    // Gemini 3.x models think by default, and on this prompt the thinking dwarfs both the
+    // input and the output. Exposing it as a toggle turns that into the demo.
+    supportsThinkingToggle: true,
     prompt:
       'Explain in three short paragraphs why a large language model bills for input ' +
       'tokens and output tokens separately, and what that means for someone designing ' +
@@ -36,5 +39,6 @@ export function toPublicWorkflow(workflow) {
     description: workflow.description,
     model: workflow.model,
     prompt: workflow.prompt,
+    supportsThinkingToggle: workflow.supportsThinkingToggle === true,
   };
 }

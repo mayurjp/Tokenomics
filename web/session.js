@@ -5,24 +5,37 @@
 // into one "total tokens" number would be the single most misleading thing this page could
 // do, so they are tracked and shown separately.
 
-const state = {
+const blank = () => ({
   calls: { count: 0, measure: 0 },
   counted: 0,
   billed: { input: 0, output: 0, thinking: 0, total: 0 },
-};
+  // Whether these numbers came from real calls or from demo-mode fixtures. A tally must
+  // never claim an API call that did not happen, and mixing the two in one total would be
+  // unreadable — so switching modes clears it rather than accumulating across both.
+  simulated: false,
+});
+
+let state = blank();
 
 const listeners = [];
 const notify = () => listeners.forEach((fn) => fn(state));
 
+export function resetSession() {
+  state = blank();
+  notify();
+}
+
 export function recordCount(result) {
   state.calls.count += 1;
   state.counted += result.tokens ?? 0;
+  state.simulated = result.demo === true;
   notify();
 }
 
 export function recordMeasure(result) {
   const s = result.stats;
   state.calls.measure += 1;
+  state.simulated = result.demo === true;
   state.billed.input += s.input_tokens ?? 0;
   state.billed.output += s.output_tokens ?? 0;
   // Absent reasoning means the model reported none — adding 0 to a running sum is correct
@@ -50,8 +63,14 @@ export function renderSession(el) {
 
     body.replaceChildren(
       el('div', { class: 'tally' }, [
-        tile(el, totalCalls, 'API calls', `${s.calls.count} counting · ${s.calls.measure} generating`),
-        tile(el, s.billed.total, 'tokens billed', 'from generation calls only'),
+        tile(el, totalCalls,
+          s.simulated ? 'simulated calls' : 'API calls',
+          s.simulated
+            ? `${s.calls.count} counting · ${s.calls.measure} generating — none were sent`
+            : `${s.calls.count} counting · ${s.calls.measure} generating`),
+        tile(el, s.billed.total,
+          s.simulated ? 'tokens (not billed)' : 'tokens billed',
+          s.simulated ? 'demo mode — nothing was charged' : 'from generation calls only'),
         tile(el, s.counted, 'tokens counted', 'never billed — countTokens does no inference'),
       ]),
       s.calls.measure > 0

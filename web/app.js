@@ -3,7 +3,7 @@
 
 import { el } from './dom.js';
 import { getCatalog, isDemo, resetCaches } from './api.js';
-import { renderSession } from './session.js';
+import { renderSession, resetSession } from './session.js';
 import { renderKeyPanel } from './keypanel.js';
 import { getKey } from './keystore.js';
 import { CARDS, renderCard } from './cards.js';
@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // with nothing on screen saying which was which.
   const onKeyChange = () => {
     resetCaches();
+    resetSession();
     paintBanner();
     paintKeyDot();
     mountCards();

@@ -108,7 +108,15 @@ export function samePriceComparisons(body) {
     return chip;
   });
 
-  body.replaceChildren(el('div', { class: 'chips' }, chips), out);
+  body.replaceChildren(
+    el('div', { class: 'chips' }, chips),
+    // Each pair is two counts, because both sides have to be measured to compare them.
+    // Saying so upfront stops the tally looking like it is double-counting.
+    el('p', { class: 'muted small hint' },
+      'Each comparison counts both sides, so it costs two calls the first time. ' +
+      'Re-opening one costs nothing — results are kept.'),
+    out
+  );
 }
 
 function side(spec, result) {

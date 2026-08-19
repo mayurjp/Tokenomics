@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Token Economics Explorer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Token Economics Explorer</h1>
+        <p class="lede">
+          Click a workflow. It sends a fixed prompt to Google Gemini for real and shows
+          exactly what the API reported it cost, in tokens. Nothing here is estimated.
+        </p>
+      </header>
+
+      <section id="workflows" aria-live="polite">
+        <p class="muted">Loading workflows&hellip;</p>
+      </section>
+
+      <footer>
+        <p class="muted">
+          The API key is not in this page. Calls go through a small server-side proxy that
+          holds the key — a static site cannot keep a secret from its own visitors.
+        </p>
+      </footer>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

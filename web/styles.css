@@ -1,0 +1,89 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --panel: #f9fafb;
+  --accent: #1d4ed8;
+  --error: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111318;
+    --fg: #e8eaed;
+    --muted: #9aa0a6;
+    --line: #2c303a;
+    --panel: #191c22;
+    --accent: #7aa2ff;
+    --error: #f28b82;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+main {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+}
+
+h1 { font-size: 1.6rem; margin: 0 0 .5rem; }
+h2 { font-size: 1.15rem; margin: 0 0 .25rem; }
+h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 1.5rem 0 .5rem; }
+
+.lede { margin: 0 0 2rem; color: var(--muted); }
+.muted { color: var(--muted); }
+.error { color: var(--error); }
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem 1.5rem;
+  background: var(--panel);
+}
+
+.model { margin: .5rem 0 0; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9rem; }
+
+pre {
+  margin: 0;
+  padding: .9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font: .875rem/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+button {
+  margin-top: 1.5rem;
+  padding: .6rem 1.25rem;
+  border: 0;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:disabled { opacity: .55; cursor: default; }
+
+.stats { width: 100%; border-collapse: collapse; }
+.stats th, .stats td {
+  padding: .45rem .25rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-weight: 400;
+}
+.stats td { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.stats tr.total th, .stats tr.total td { font-weight: 700; }
+
+footer { margin-top: 2.5rem; font-size: .875rem; }

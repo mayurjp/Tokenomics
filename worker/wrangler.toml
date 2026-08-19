@@ -1,0 +1,22 @@
+name = "tokenomics-proxy"
+main = "src/index.js"
+compatibility_date = "2025-05-01"
+
+[vars]
+# Comma-separated exact origins allowed to call /api/measure. Set this to your GitHub
+# Pages origin before deploying, e.g. "https://<user>.github.io".
+# Leave empty for local dev — an empty list disables the origin check so `wrangler dev`
+# and a local static server work without extra setup.
+ALLOWED_ORIGIN = ""
+
+# The Gemini key is NEVER in this file. It is a secret:
+#   npx wrangler secret put GEMINI_API_KEY
+# Locally it comes from .dev.vars, which is git-ignored.
+
+# Budget protection for a shared key. Uncomment before deploying publicly — without it
+# the endpoint is unthrottled, and an unthrottled endpoint is an unthrottled bill.
+# [[unsafe.bindings]]
+# name = "MEASURE_LIMITER"
+# type = "ratelimit"
+# namespace_id = "1001"
+# simple = { limit = 20, period = 60 }

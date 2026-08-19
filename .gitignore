@@ -25,3 +25,10 @@ appsettings.*.local.json
 # OS cruft
 Thumbs.db
 .DS_Store
+
+# Cloudflare Worker local secrets — the Gemini key lives here in dev, never in-tree.
+.dev.vars
+
+# Node
+node_modules/
+.wrangler/

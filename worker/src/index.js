@@ -5,7 +5,7 @@
 // Network tab regardless. So the key lives here as a Wrangler secret and never reaches
 // the browser. The page stays a pile of static files with no secret in it.
 
-import { WORKFLOWS, findWorkflow, toPublicWorkflow } from './workflows.js';
+import { DEMOS, DEFAULT_MODEL, findDemo, findVariant, toPublicDemo } from './demos.js';
 import { toTokenStats } from './tokenStats.js';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/';
@@ -13,10 +13,9 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/';
 // The token counter is the one endpoint that takes arbitrary caller text, which costs the
 // proxy its "can only ever run our own prompts" property. Two things keep that acceptable:
 // countTokens does no generation (so there is no output bill to run up), and the input is
-// capped here. The cap is on characters, not tokens — we can't know the token count until
+// capped here. The cap is on characters, not tokens — we cannot know the token count until
 // after the call, which is the whole point of the endpoint.
 const MAX_COUNT_CHARS = 8000;
-const COUNT_MODEL = 'gemini-3.5-flash';
 
 export default {
   async fetch(request, env) {
@@ -30,8 +29,15 @@ export default {
     const url = new URL(request.url);
 
     try {
-      if (request.method === 'GET' && url.pathname === '/api/workflows') {
-        return json({ workflows: WORKFLOWS.map(toPublicWorkflow) }, 200, cors);
+      if (request.method === 'GET' && url.pathname === '/api/demos') {
+        return json(
+          {
+            countEndpoint: endpointPath(DEFAULT_MODEL, 'countTokens'),
+            demos: DEMOS.map((d) => toPublicDemo(d, endpointPath)),
+          },
+          200,
+          cors
+        );
       }
 
       if (request.method === 'POST' && url.pathname === '/api/measure') {
@@ -52,69 +58,51 @@ export default {
   },
 };
 
-async function handleMeasure(request, env, origin, cors) {
+// Shared preamble for both POST routes: origin, key, rate limit, JSON body.
+async function guard(request, env, origin, cors) {
   // Origin filtering keeps casual scrapers off a shared key. It is NOT authentication —
-  // any non-browser client can set whatever Origin it likes. The real containment is that
-  // this endpoint can only ever run a prompt from the server-side catalog, plus the rate
-  // limit below.
+  // any non-browser client can set whatever Origin it likes.
   if (!isAllowedOrigin(origin, env)) {
-    return json({ error: 'Origin not allowed' }, 403, cors);
+    return { error: json({ error: 'Origin not allowed' }, 403, cors) };
   }
-
   if (!env.GEMINI_API_KEY) {
     console.error('GEMINI_API_KEY is not configured');
-    return json({ error: 'Server is not configured' }, 500, cors);
+    return { error: json({ error: 'Server is not configured' }, 500, cors) };
   }
 
   const limited = await checkRateLimit(request, env);
   if (limited) {
-    return json({ error: limited }, 429, cors);
+    return { error: json({ error: limited }, 429, cors) };
   }
 
-  let body;
   try {
-    body = await request.json();
+    return { body: await request.json() };
   } catch {
-    return json({ error: 'Request body must be JSON' }, 400, cors);
+    return { error: json({ error: 'Request body must be JSON' }, 400, cors) };
+  }
+}
+
+async function handleMeasure(request, env, origin, cors) {
+  const { error, body } = await guard(request, env, origin, cors);
+  if (error) return error;
+
+  const demo = findDemo(body?.demoId);
+  if (!demo) {
+    return json({ error: `Unknown demo: ${String(body?.demoId ?? '')}` }, 400, cors);
   }
 
-  const workflow = findWorkflow(body?.workflowId);
-  if (!workflow) {
-    return json({ error: `Unknown workflow: ${String(body?.workflowId ?? '')}` }, 400, cors);
+  const variant = findVariant(demo, body?.variantId);
+  if (!variant) {
+    return json({ error: `Unknown variant: ${String(body?.variantId ?? '')}` }, 400, cors);
   }
 
-  // The only caller-controlled knob, and deliberately a boolean rather than a passthrough
-  // of generationConfig — the caller picks between two fixed shapes, it doesn't get to
-  // compose arbitrary requests. Defaults to the model's own behavior (thinking on).
-  const thinking = body?.thinking !== false;
-  if (thinking && !workflow.supportsThinkingToggle && body?.thinking !== undefined) {
-    return json({ error: 'This workflow does not support the thinking toggle' }, 400, cors);
-  }
-
-  const result = await measure(workflow, env.GEMINI_API_KEY, thinking);
+  const result = await measure(demo, variant, env.GEMINI_API_KEY);
   return json(result.body, result.status, cors);
 }
 
 async function handleCount(request, env, origin, cors) {
-  if (!isAllowedOrigin(origin, env)) {
-    return json({ error: 'Origin not allowed' }, 403, cors);
-  }
-  if (!env.GEMINI_API_KEY) {
-    console.error('GEMINI_API_KEY is not configured');
-    return json({ error: 'Server is not configured' }, 500, cors);
-  }
-
-  const limited = await checkRateLimit(request, env);
-  if (limited) {
-    return json({ error: limited }, 429, cors);
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'Request body must be JSON' }, 400, cors);
-  }
+  const { error, body } = await guard(request, env, origin, cors);
+  if (error) return error;
 
   const text = body?.text;
   if (typeof text !== 'string' || text.length === 0) {
@@ -124,19 +112,13 @@ async function handleCount(request, env, origin, cors) {
     return json({ error: `text is limited to ${MAX_COUNT_CHARS} characters` }, 400, cors);
   }
 
-  const response = await fetch(`${GEMINI_BASE}models/${COUNT_MODEL}:countTokens`, {
+  const response = await fetch(`${GEMINI_BASE}models/${DEFAULT_MODEL}:countTokens`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
     body: JSON.stringify({ contents: [{ parts: [{ text }] }] }),
   });
 
-  const raw = await response.text();
-  let parsed = null;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    // fall through — not JSON
-  }
+  const parsed = await readJson(response);
 
   if (!response.ok) {
     const message = parsed?.error?.message ?? `countTokens failed with status ${response.status}`;
@@ -144,40 +126,49 @@ async function handleCount(request, env, origin, cors) {
   }
 
   return json(
-    { model: COUNT_MODEL, tokens: parsed?.totalTokens ?? null, chars: text.length },
+    {
+      model: DEFAULT_MODEL,
+      endpoint: endpointPath(DEFAULT_MODEL, 'countTokens'),
+      tokens: parsed?.totalTokens ?? null,
+      chars: text.length,
+    },
     200,
     cors
   );
 }
 
-// One generateContent call. Errors map Gemini's own error.message through — never the
-// raw upstream body, which can carry request detail we don't want to hand out.
-async function measure(workflow, apiKey, thinking) {
-  const requestBody = { contents: [{ parts: [{ text: workflow.prompt }] }] };
+// One generateContent call, assembled from a server-side variant.
+async function measure(demo, variant, apiKey) {
+  const model = variant.model ?? demo.model;
+  const requestBody = { contents: [{ parts: [{ text: variant.prompt }] }] };
+  const generationConfig = {};
 
-  // thinkingBudget: 0 is the switch that actually turns thinking off, and it's the portable
-  // one: thinkingLevel 'minimal' is rejected outright by some 3.x models. Note the budget is
-  // a hint, not a cap — a non-zero budget is routinely overshot. 0 is honored.
-  if (!thinking) {
-    requestBody.generationConfig = { thinkingConfig: { thinkingBudget: 0 } };
+  if (variant.systemInstruction) {
+    requestBody.systemInstruction = { parts: [{ text: variant.systemInstruction }] };
+  }
+  if (typeof variant.maxOutputTokens === 'number') {
+    generationConfig.maxOutputTokens = variant.maxOutputTokens;
+  }
+  if (variant.json) {
+    generationConfig.responseMimeType = 'application/json';
+  }
+  // thinkingBudget: 0 is the switch that actually turns reasoning off, and it is the
+  // portable one — thinkingLevel 'minimal' is rejected outright by some 3.x models. The
+  // budget is a hint and gets overshot; only 0 is reliably honored.
+  if (variant.thinkingBudget === 0) {
+    generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  }
+  if (Object.keys(generationConfig).length > 0) {
+    requestBody.generationConfig = generationConfig;
   }
 
-  const response = await fetch(`${GEMINI_BASE}models/${workflow.model}:generateContent`, {
+  const response = await fetch(`${GEMINI_BASE}models/${model}:generateContent`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(requestBody),
   });
 
-  const rawText = await response.text();
-  let parsed = null;
-  try {
-    parsed = JSON.parse(rawText);
-  } catch {
-    // fall through — the body wasn't JSON
-  }
+  const parsed = await readJson(response);
 
   if (!response.ok) {
     const message =
@@ -193,33 +184,49 @@ async function measure(workflow, apiKey, thinking) {
 
   const usage = parsed.usageMetadata;
   if (!usage) {
-    return {
-      status: 502,
-      body: { error: 'Gemini API response did not include usage metadata' },
-    };
+    return { status: 502, body: { error: 'Gemini API response did not include usage metadata' } };
   }
 
-  const text = parsed.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+  const candidate = parsed.candidates?.[0];
+  const text = candidate?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
 
   return {
     status: 200,
     body: {
-      model: workflow.model,
-      thinking,
+      demoId: demo.id,
+      variantId: variant.id,
+      model,
+      endpoint: endpointPath(model, 'generateContent'),
       response_text: text,
+      // MAX_TOKENS rather than STOP means the cap cut the answer off mid-sentence. The UI
+      // says so, otherwise a truncated reply just looks like a bug.
+      truncated: candidate?.finishReason === 'MAX_TOKENS',
       stats: toTokenStats(usage),
       raw: usage,
     },
   };
 }
 
+async function readJson(response) {
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+// Shown in the UI so each card names the Gemini endpoint behind it. Derived here rather
+// than hardcoded in the frontend so there is one source of truth for what was actually hit.
+function endpointPath(model, method) {
+  return `POST /v1beta/models/${model}:${method}`;
+}
+
 // Budget protection. The key is shared by every visitor, so an unthrottled endpoint is an
 // unthrottled bill. Uses the Workers rate-limiting binding when one is configured; without
 // it the endpoint still works, so local dev needs no extra setup.
 async function checkRateLimit(request, env) {
-  if (!env.MEASURE_LIMITER) {
-    return null;
-  }
+  if (!env.MEASURE_LIMITER) return null;
 
   const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
   const { success } = await env.MEASURE_LIMITER.limit({ key: ip });

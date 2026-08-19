@@ -13,6 +13,10 @@ worker/   # Cloudflare Worker that holds the Gemini API key
 docs/     # design docs, one per phase
 ```
 
+Fourteen cards, one lesson each, laid out as a grid you can scan at a glance. Click one to
+expand it in place. Cards share no state and no ordering — each can be run, reordered or
+removed on its own.
+
 ## Where the API key lives — and why not in the page
 
 The key is **not** in the site, encrypted or otherwise. A static page cannot keep a secret
@@ -53,12 +57,53 @@ Deploy steps, the API contract, and the pre-launch checklist are in
 [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on push to `main` — set the
 repo's Pages source to **GitHub Actions**, not "deploy from a branch".
 
-## Phases
+## Demo mode
 
-- **Phase 1 (done)** — one workflow, one fixed prompt, real input/output/total token counts.
-- **Phase 2 (next)** — prompt caching: run the same padded prompt twice and watch
-  `cache_read_tokens` go from "not reported" to a real number.
-  See [`docs/phase2-caching-design.md`](docs/phase2-caching-design.md).
+Add `?demo` to the URL and the page runs on fabricated data: no API calls, no key, no quota.
+A banner says so, loudly and permanently, because the rest of the time the page's whole claim
+is that its numbers are real. Useful for working on the UI without spending anything.
+
+## The cards
+
+Backed by `countTokens` — no inference, nothing billed:
+
+| Card | Shows |
+| --- | --- |
+| Tokenizer | Count any text; tokens are not words |
+| Phrasing Cost | Numbers, JSON, language, rarity and whitespace compared |
+
+Backed by `generateContent` — these really run the model:
+
+| Card | Shows |
+| --- | --- |
+| Baseline Call | What one call reports it spent |
+| Thinking Tokens | Reasoning on vs off |
+| Prompt Caching | The same long prompt twice; cache reads on the second |
+| Model Routing | One prompt across three tiers |
+| System Prompt Bloat | A bloated system prompt vs a lean one |
+| Output Capping | With and without `maxOutputTokens` |
+| Structured Output | The same extraction as prose and as JSON |
+| Retrieval vs Stuffing | Whole document vs the one relevant section |
+| Context Compression | Full history vs a summary |
+
+Reference only, no API call — these cannot honestly be demonstrated live, so they argue from
+numbers instead:
+
+| Card | Shows |
+| --- | --- |
+| Batch API | Half price for work nobody is waiting for |
+| Semantic Caching | Reusing answers rather than tokens |
+| FinOps | Attribution and unit economics on top of the measurements |
+
+Adding a lesson is a catalog change, not a UI change: demos live in
+[`worker/src/demos.js`](worker/src/demos.js) and every comparison card is the same renderer
+with a different demo id.
+
+## A note on quota
+
+Gemini's free tier allows **20 `generateContent` requests per day, per model**. A public
+deployment sharing one key runs out fast, and the counting cards are effectively free while
+the generation cards are the scarce resource. `?demo` exists partly for this reason.
 
 ## A note on the design docs
 

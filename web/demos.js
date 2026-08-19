@@ -95,7 +95,7 @@ export const DEMOS = [
     variants: [
       { id: 'lite', label: 'gemini-3.1-flash-lite', prompt: BASIC_PROMPT, model: 'gemini-3.1-flash-lite' },
       { id: 'flash', label: 'gemini-3.5-flash', prompt: BASIC_PROMPT, model: 'gemini-3.5-flash' },
-      { id: 'pro', label: 'gemini-3.1-pro', prompt: BASIC_PROMPT, model: 'gemini-3.1-pro' },
+      { id: 'pro', label: 'gemini-3.1-pro-preview', prompt: BASIC_PROMPT, model: 'gemini-3.1-pro-preview' },
     ],
   },
 

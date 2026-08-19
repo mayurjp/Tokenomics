@@ -81,9 +81,12 @@ const RUNS = {
     second: { input: 2418, output: 92, thinking: null, cacheRead: 2304, text: ANSWER_SHORT },
   },
   routing: {
+    // All three succeed. An earlier fixture faked a failing tier to exercise the
+    // degradation path, but a fabricated outage is not a lesson — it just makes the card
+    // look broken. Live mode still handles a genuinely unreachable tier; see cards-run.js.
     lite: { input: 36, output: 208, thinking: null, text: ANSWER_LONG, model: 'gemini-3.1-flash-lite' },
     flash: { input: 36, output: 262, thinking: 812, text: ANSWER_LONG, model: 'gemini-3.5-flash' },
-    pro: { error: 'This model is not available on this key or tier.', model: 'gemini-3.1-pro' },
+    pro: { input: 36, output: 291, thinking: 1104, text: ANSWER_LONG, model: 'gemini-3.1-pro-preview' },
   },
   'system-prompt': {
     bloated: { input: 178, output: 41, thinking: null, text: ANSWER_TOKEN },
@@ -159,7 +162,7 @@ const LABELS = {
   'single-call': { default: 'one call' },
   thinking: { on: 'thinking on', off: 'thinking off' },
   caching: { first: 'first call', second: 'second call' },
-  routing: { lite: 'gemini-3.1-flash-lite', flash: 'gemini-3.5-flash', pro: 'gemini-3.1-pro' },
+  routing: { lite: 'gemini-3.1-flash-lite', flash: 'gemini-3.5-flash', pro: 'gemini-3.1-pro-preview' },
   'system-prompt': { bloated: 'bloated system prompt', lean: 'lean system prompt' },
   'output-cap': { uncapped: 'no limit', capped: 'capped at 60 tokens' },
   structured: { prose: 'as prose', json: 'as JSON' },

@@ -219,8 +219,7 @@ export function batchCard(body) {
     el('p', { class: 'muted small' },
       'Submits one real batch job. The tokens and the model are identical to an interactive ' +
       'call; only the price and the waiting differ.'),
-    el('details', { class: 'prompts' }, [
-      el('summary', {}, 'Show what gets sent'),
+    el('div', { class: 'sent' }, [
       el('pre', { class: 'prompt small' }, PROMPT),
       el('div', { class: 'flags muted small' }, `model ${MODEL} · batchGenerateContent`),
     ]),

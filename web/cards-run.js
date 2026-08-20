@@ -42,8 +42,56 @@ function statsTable(stats, highlight) {
   ]);
 }
 
+// What was configured for this variant, in the words the API uses.
+function flagLine(variant) {
+  return [
+    `model ${variant.model}`,
+    variant.maxOutputTokens ? `max ${variant.maxOutputTokens} output tokens` : null,
+    variant.json ? 'JSON response' : null,
+    variant.thinkingDisabled ? 'thinking off' : null,
+  ].filter(Boolean).join(' · ');
+}
+
+// A short prompt reads better inline; a long one would bury the numbers underneath it, so
+// past a paragraph or so it collapses. The reference document is 10,000 characters — nobody
+// wants that unfolded in a column by default.
+const INLINE_LIMIT = 400;
+
+function promptBlock(variant) {
+  const parts = [];
+
+  if (variant.systemInstruction) {
+    parts.push(el('pre', { class: 'prompt small' }, `[system] ${variant.systemInstruction}`));
+  }
+  parts.push(el('pre', { class: 'prompt small' }, variant.prompt));
+  parts.push(el('div', { class: 'flags muted small' }, flagLine(variant)));
+
+  const length = (variant.systemInstruction ?? '').length + variant.prompt.length;
+  if (length <= INLINE_LIMIT) {
+    return el('div', { class: 'sent' }, parts);
+  }
+
+  return el('details', { class: 'sent' }, [
+    el('summary', {}, `What gets sent · ${length.toLocaleString()} characters`),
+    ...parts,
+  ]);
+}
+
+// One column per variant, holding everything about it in one place: what was sent, what it
+// cost, what came back. Rendered before a run too, so you can read what is about to be
+// spent — with a placeholder where the numbers will go rather than an empty gap.
 function variantColumn(variant, outcome, highlight) {
-  const head = [el('div', { class: 'pair-title muted' }, variant.label)];
+  const head = [
+    el('div', { class: 'pair-title muted' }, variant.label),
+    promptBlock(variant),
+  ];
+
+  if (!outcome) {
+    return el('div', { class: 'pair-side' }, [
+      ...head,
+      el('p', { class: 'muted small awaiting' }, 'Not run yet.'),
+    ]);
+  }
 
   if (outcome.error) {
     return el('div', { class: 'pair-side' }, [
@@ -145,32 +193,19 @@ export function runnerCard(demoId, options = {}) {
     const flow = options.flow ? createFlow(options.flow) : null;
     const button = el('button', { type: 'button' }, options.runLabel ?? 'Run');
 
-    // The prompts are what the demo is actually about, so they are inspectable — but they
-    // are long, so they start collapsed rather than burying the numbers.
-    const details = el('details', { class: 'prompts' }, [
-      el('summary', {}, `Show what gets sent (${demo.variants.length} variants)`),
-      ...demo.variants.map((v) =>
-        el('div', { class: 'prompt-block' }, [
-          el('div', { class: 'pair-title muted' }, v.label),
-          v.systemInstruction
-            ? el('pre', { class: 'prompt small' }, `[system] ${v.systemInstruction}`)
-            : null,
-          el('pre', { class: 'prompt small' }, v.prompt),
-          el('div', { class: 'flags muted small' },
-            [
-              `model ${v.model}`,
-              v.maxOutputTokens ? `max ${v.maxOutputTokens} output tokens` : null,
-              v.json ? 'JSON response' : null,
-              v.thinkingDisabled ? 'thinking off' : null,
-            ].filter(Boolean).join(' · ')),
-        ])
-      ),
-    ]);
+    // Columns exist from the start, holding the prompts. Running fills in the numbers
+    // beneath each one rather than replacing the whole block.
+    const columns = (outcomes) =>
+      el('div', { class: 'pair-grid' },
+        demo.variants.map((v, i) => variantColumn(v, outcomes?.[i], demo.compare)));
 
     button.addEventListener('click', async () => {
       button.disabled = true;
       button.textContent = 'Running…';
-      out.replaceChildren(el('p', { class: 'muted' }, `Running ${demo.variants.length} calls…`));
+      out.replaceChildren(
+        columns(null),
+        el('p', { class: 'muted' }, `Running ${demo.variants.length} calls…`)
+      );
 
       // Sequential, never parallel. Two identical prompts in flight at once is exactly the
       // shape that breaks the caching demo, and ordering matters wherever one call is meant
@@ -205,8 +240,7 @@ export function runnerCard(demoId, options = {}) {
       // it. Anything conditional has to be filtered out before it gets here.
       out.replaceChildren(
         ...[
-          el('div', { class: 'pair-grid' },
-            demo.variants.map((v, i) => variantColumn(v, outcomes[i], demo.compare))),
+          columns(outcomes),
           line ? el('p', { class: 'savings' }, line) : null,
           money,
           outcomes.every((o) => o.error)
@@ -219,8 +253,10 @@ export function runnerCard(demoId, options = {}) {
       button.textContent = options.runLabel ?? 'Run';
     });
 
+    out.replaceChildren(columns(null));
+
     body.replaceChildren(
-      ...[flow?.node, details, el('div', { class: 'controls' }, [button]), out, meter.node]
+      ...[flow?.node, el('div', { class: 'controls' }, [button]), out, meter.node]
         .filter(Boolean)
     );
   };

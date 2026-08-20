@@ -215,11 +215,15 @@ footer { margin-top: 2.5rem; font-size: .875rem; }
 
 .card.reference { background: transparent; border-style: dashed; }
 
-details.prompts { margin-bottom: 1.25rem; }
-details.prompts > summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
-.prompt-block { margin-top: .9rem; }
-.prompt-block .prompt { margin-top: .3rem; max-height: 14rem; overflow-y: auto; }
-.flags { margin-top: .3rem; }
+/* What gets sent, inside its own variant column. */
+.sent { margin-bottom: .9rem; }
+details.sent > summary { cursor: pointer; font-size: .8rem; color: var(--muted); margin-bottom: .5rem; }
+.sent .prompt { max-height: 11rem; overflow-y: auto; }
+.sent .prompt + .prompt { margin-top: .35rem; }
+.flags { margin-top: .35rem; }
+
+/* Keeps the pre-run column from collapsing to nothing, so the two columns stay level. */
+.awaiting { margin: .75rem 0 0; padding-top: .75rem; border-top: 1px solid var(--line); }
 
 .badge-inline {
   display: inline-block; margin: .6rem 0 0;

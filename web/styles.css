@@ -19,7 +19,7 @@
   /* Diagram fills. Deliberately soft — the bar should read as a quiet illustration, not a
      chart competing with the numbers beside it. Thinking carries the accent because it is
      the part of the lesson people do not expect. */
-  --flow-input: #b8bfd4;
+  --flow-input: #8f98b4;
   --flow-cache: #dde3f5;
   --flow-think: #6d4df0;
   --flow-output: #12a594;
@@ -411,7 +411,7 @@ details.answers > summary { cursor: pointer; font-size: .82rem; color: var(--mut
 .mech-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 .mech-scroll { margin-top: .9rem; overflow-x: auto; }
-.mech-svg { display: block; width: 100%; min-width: 34rem; max-width: 42rem; height: auto; }
+.mech-svg { display: block; width: 100%; min-width: 40rem; max-width: 48rem; height: auto; }
 
 /* Text inside the SVG. Sized in user units against the 660-wide viewBox, so it scales with
    the drawing rather than fighting it. */
@@ -570,3 +570,13 @@ pre, textarea, .flow-chip { background: color-mix(in srgb, var(--fg) 3%, var(--b
 
 .prompts-grid { margin-bottom: 1.2rem; }
 .prompts-grid .sent { margin-bottom: 0; }
+
+/* lane tones — one class per outcome, so the colour carries the meaning */
+.mech-dashed { stroke-dasharray: 6 5; }
+.tone-out .mech-line, .tone-out .mech-head { stroke: var(--flow-output); }
+.tone-out text.mech-label { fill: var(--fg); }
+.tone-in .mech-line { stroke: var(--flow-input); }
+.tone-cache .mech-line { stroke: var(--flow-cache); }
+.tone-think .mech-line { stroke: var(--flow-think); }
+.tone-muted .mech-line { stroke: var(--muted); opacity: .55; }
+.tone-muted text { fill: var(--muted); }

@@ -10,6 +10,7 @@ import { createMeter } from './meter.js';
 import { createFlow } from './flow.js';
 import { createTradeoff } from './tradeoff.js';
 import { createMechanism } from './mechanism.js';
+import { MECHANISMS } from './mechanisms.js';
 import { createApiSwitch } from './apiswitch.js';
 import { costOf, atVolume, usd, isPriced, RUNS_PER_MONTH, PRICING_DATE } from './pricing.js';
 
@@ -279,7 +280,9 @@ export function runnerCard(demoId, options = {}) {
     // flow: true renders the diagram with no explainer paragraph; a string supplies one.
     const flow = options.flow ? createFlow(typeof options.flow === 'string' ? options.flow : null) : null;
     const trade = options.tradeoffs ? createTradeoff(options.tradeoffs, options.compact === true) : null;
-    const mech = options.mechanism ? createMechanism() : null;
+    // The spec is looked up by demo id: a card either has a mechanism worth drawing or it
+    // does not, and that is a property of the lesson rather than a per-card switch.
+    const mech = MECHANISMS[demoId] ? createMechanism(MECHANISMS[demoId]) : null;
     const apiSwitch = options.apiSwitch ? createApiSwitch(demo) : null;
     const compact = options.compact === true;
     const button = el('button', { type: 'button' }, options.runLabel ?? 'Run');
@@ -325,6 +328,7 @@ export function runnerCard(demoId, options = {}) {
 
       const runs = demo.variants.map((v, i) => ({
         variant: v.label,
+        variantId: v.id,
         model: outcomes[i].result?.model ?? v.model,
         stats: outcomes[i].result?.stats ?? null,
         durationMs: outcomes[i].result?.durationMs ?? null,
@@ -333,9 +337,9 @@ export function runnerCard(demoId, options = {}) {
       if (trade) trade.update(runs);
 
       if (flow) flow.update(runs, null, Boolean(mech));
-      // The mechanism explains the run that just happened, so it needs the variant that
-      // actually did any thinking — there is nothing to explain about the one that did not.
-      if (mech) mech.update(runs.find((r) => r.stats && (r.stats.reasoning_tokens ?? 0) > 0));
+      // Each spec picks the variants it needs out of the run and returns null when the run
+      // cannot support its claim — a caching demo that got no hit has no cache lane to draw.
+      if (mech) mech.update(runs);
 
       const line = compact ? null : summary(demo, outcomes);
       const money = compact ? null : moneyLine(demo, outcomes);

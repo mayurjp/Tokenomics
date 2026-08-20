@@ -1,19 +1,19 @@
 // Where the tokens actually go.
 //
-// The proportional bars show how big each part of the bill is. They cannot show what
-// happens to it — and that is the fact this card exists for: the reasoning is generated,
-// billed, and then never sent to you. `thoughtsTokenCount` is in the usage payload; the
-// thinking itself is in no field of the response at all.
+// The bars show how big each part of the bill is. They cannot show what happens to it, and
+// on most of these cards that is the lesson: reasoning is generated and then discarded, a
+// retriever throws away most of a document before the model ever sees it, a cache serves
+// input at a tenth of the price, a summary replaces turns you no longer send.
 //
-// So this draws fate rather than size. The answer's arrow leaves the model and reaches you.
-// The reasoning's arrow stops dead. The billing bracket goes under both.
+// So this draws fate rather than size. It is one renderer over a small vocabulary — lanes
+// going into a box or out of it, each with a token count and an outcome — and each card
+// supplies a spec in mechanisms.js. Bespoke drawings per card would read better in
+// isolation and drift apart in practice.
 //
-// It renders only after a run, because every number in it is a measured one — there is no
-// schematic state here, since a diagram of this shape with invented counts would be making
-// the exact claim the page refuses to make.
+// It renders only after a run. Every number in it is measured; a diagram of this shape with
+// invented counts would make exactly the claim this page refuses to make.
 
 import { el } from './dom.js';
-import { costOf, atVolume, usd, RUNS_PER_MONTH } from './pricing.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -28,26 +28,79 @@ function svgEl(tag, attrs, children) {
 }
 
 const text = (x, y, str, cls) =>
-  svgEl('text', { x, y, class: cls ?? '' }, [document.createTextNode(str)]);
+  svgEl('text', { x, y, class: cls ?? '' }, [document.createTextNode(String(str))]);
 
-function diagram(stats, model) {
-  const input = stats.input_tokens ?? 0;
-  const think = stats.reasoning_tokens ?? 0;
-  const output = stats.output_tokens ?? 0;
-  const total = stats.total_tokens ?? input + think + output;
-  const monthly = usd(atVolume(costOf(stats, model)));
+// How a lane is drawn, and what it means. The vocabulary is deliberately small: every card
+// so far reduces to some arrangement of these five.
+const FATE = {
+  delivered: { line: 'mech-line', stop: false, tone: 'out' },   // reaches you
+  billed:    { line: 'mech-line', stop: false, tone: 'in' },    // charged at full rate
+  discounted:{ line: 'mech-line mech-dashed', stop: false, tone: 'cache' }, // cheaper
+  dropped:   { line: 'mech-line mech-dotted', stop: true, tone: 'think' },  // made, then binned
+  skipped:   { line: 'mech-line mech-dashed', stop: true, tone: 'muted' },  // never sent at all
+};
 
-  const n = (v) => v.toLocaleString();
+// Geometry. Wide enough that the right-hand outcome text has somewhere to live: an earlier
+// pass clipped "sent to the model" at the viewBox edge and stacked the left-hand label on
+// top of its own note.
+const W = 800;
+const BOX_X = 214;
+const BOX_W = 296;
+const BOX_R = BOX_X + BOX_W;
+const OUT_END = 640;        // where a delivered arrow stops
+const STOP_END = BOX_R + 46; // where a terminated one does
+
+function inLane(lane, y) {
+  const f = FATE[lane.fate] ?? FATE.billed;
+  return svgEl('g', { class: `mech-lane tone-${f.tone}` }, [
+    text(0, y - 5, lane.label, 'mech-label'),
+    text(0, y + 13, `${lane.tokens.toLocaleString()} tokens`, 'mech-num'),
+    lane.note ? text(0, y + 29, lane.note, 'mech-muted') : null,
+    svgEl('line', {
+      x1: 168, y1: y, x2: BOX_X - 8, y2: y,
+      class: f.line, 'marker-end': 'url(#mech-arrow)',
+    }),
+  ]);
+}
+
+function outLane(lane, y) {
+  const f = FATE[lane.fate] ?? FATE.billed;
+  const endX = f.stop ? STOP_END : OUT_END;
+  const labelX = f.stop ? endX + 26 : OUT_END + 14;
+
+  return svgEl('g', { class: `mech-lane tone-${f.tone}` }, [
+    text(BOX_X + 14, y - 5, lane.label, 'mech-label'),
+    svgEl('line', {
+      x1: BOX_X + 14, y1: y + 8, x2: endX, y2: y + 8,
+      class: f.line, ...(f.stop ? {} : { 'marker-end': 'url(#mech-arrow)' }),
+    }),
+    text(BOX_X + 16, y + 26, `${lane.tokens.toLocaleString()} tokens`, 'mech-num'),
+    f.stop
+      ? svgEl('g', { class: 'mech-stop' }, [
+          svgEl('line', { x1: endX + 6, y1: y + 2, x2: endX + 18, y2: y + 14 }),
+          svgEl('line', { x1: endX + 18, y1: y + 2, x2: endX + 6, y2: y + 14 }),
+        ])
+      : null,
+    lane.outcome ? text(labelX, y + 4, lane.outcome, 'mech-label') : null,
+    lane.note ? text(labelX, y + 20, lane.note, 'mech-muted') : null,
+  ]);
+}
+
+function diagram(spec) {
+  const ins = spec.in ?? [];
+  const outs = spec.out ?? [];
+  const gap = 58;
+  const rows = Math.max(ins.length, outs.length);
+  const boxTop = 26;
+  const boxH = Math.max(104, rows * gap + 30);
+  const height = boxTop + boxH + 66;
+  const firstY = boxTop + 54;
 
   return svgEl('svg', {
     class: 'mech-svg',
-    viewBox: '0 0 660 186',
+    viewBox: `0 0 ${W} ${height}`,
     role: 'img',
-    'aria-label':
-      `Your prompt of ${n(input)} tokens goes to the model. The model generates ` +
-      `${n(think)} reasoning tokens which are billed but never returned to you, and ` +
-      `${n(output)} answer tokens which are. You are billed for all ${n(total)}, ` +
-      `about ${monthly} per ${RUNS_PER_MONTH.toLocaleString()} runs.`,
+    'aria-label': spec.summary,
   }, [
     svgEl('defs', {}, [
       svgEl('marker', {
@@ -56,82 +109,53 @@ function diagram(stats, model) {
       }, [svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'mech-head' })]),
     ]),
 
-    // ---- what you send
-    text(0, 62, 'your prompt', 'mech-label'),
-    text(0, 80, `${n(input)} tokens`, 'mech-num'),
-    svgEl('line', { x1: 96, y1: 74, x2: 148, y2: 74, class: 'mech-line', 'marker-end': 'url(#mech-arrow)' }),
+    svgEl('rect', { x: BOX_X, y: boxTop, width: BOX_W, height: boxH, rx: 10, class: 'mech-box' }),
+    text(BOX_X + 12, boxTop + 20, spec.process, 'mech-cap'),
 
-    // ---- the model
-    svgEl('rect', { x: 156, y: 20, width: 300, height: 112, rx: 10, class: 'mech-box' }),
-    text(166, 38, `the model · ${model}`, 'mech-cap'),
+    ...ins.map((lane, i) => inLane(lane, firstY + i * gap)),
+    ...outs.map((lane, i) => outLane(lane, firstY + i * gap)),
 
-    // ---- reasoning: generated, billed, discarded. Its arrow terminates.
-    svgEl('g', { class: 'mech-think' }, [
-      text(176, 66, 'thinks', 'mech-label'),
-      svgEl('line', { x1: 232, y1: 61, x2: 396, y2: 61, class: 'mech-line mech-dotted' }),
-      text(250, 55, `${n(think)} tokens`, 'mech-num'),
-      svgEl('g', { class: 'mech-stop' }, [
-        svgEl('line', { x1: 402, y1: 55, x2: 414, y2: 67 }),
-        svgEl('line', { x1: 414, y1: 55, x2: 402, y2: 67 }),
-      ]),
-      text(468, 58, 'never', 'mech-muted'),
-      text(468, 72, 'returned', 'mech-muted'),
-    ]),
-
-    // ---- the answer: the only branch that reaches you
-    text(176, 112, 'answers', 'mech-label'),
-    svgEl('line', { x1: 244, y1: 107, x2: 560, y2: 107, class: 'mech-line', 'marker-end': 'url(#mech-arrow)' }),
-    text(262, 101, `${n(output)} tokens`, 'mech-num'),
-    text(572, 103, 'you', 'mech-label'),
-    text(572, 118, 'read this', 'mech-muted'),
-
-    // ---- billing brackets both branches
-    svgEl('path', { d: 'M 156 144 L 156 152 L 456 152 L 456 144', class: 'mech-bracket' }),
-    text(160, 172, `billed for all ${n(total)} tokens`, 'mech-bill'),
-    text(470, 172, `${monthly} / ${RUNS_PER_MONTH.toLocaleString()} runs`, 'mech-muted'),
+    svgEl('path', {
+      d: `M ${BOX_X} ${boxTop + boxH + 12} L ${BOX_X} ${boxTop + boxH + 20} L ${BOX_R} ${boxTop + boxH + 20} L ${BOX_R} ${boxTop + boxH + 12}`,
+      class: 'mech-bracket',
+    }),
+    text(BOX_X + 2, boxTop + boxH + 44, spec.billed, 'mech-bill'),
+    spec.cost ? text(BOX_R + 18, boxTop + boxH + 44, spec.cost, 'mech-muted') : null,
   ]);
 }
 
-export function createMechanism() {
+export function createMechanism(build) {
   const node = el('figure', { class: 'mech', hidden: '' });
 
   return {
     node,
 
-    update(run) {
-      if (!run?.stats || (run.stats.reasoning_tokens ?? 0) <= 0) {
+    update(runs) {
+      const spec = build(runs);
+      if (!spec) {
         node.hidden = true;
         return;
       }
 
-      const s = run.stats;
-      const total = s.total_tokens ?? 0;
-      const output = s.output_tokens ?? 0;
-
       const toggle = el('button', {
         type: 'button', class: 'mech-toggle', 'aria-expanded': 'false',
-      }, 'What happened inside?');
-
-      // The gap between the two numbers is the hook, and it is a real gap: the bill says
-      // one thing, the response you can read says another. The diagram answers it.
-      const hook = el('p', { class: 'mech-hook' }, [
-        el('strong', {}, `${total.toLocaleString()} tokens billed`),
-        `, but only ${output.toLocaleString()} of them ever reached you. `,
-      ]);
-
-      const figure = diagram(s, run.model);
+      }, spec.reveal ?? 'What happened inside?');
 
       toggle.addEventListener('click', () => {
         const open = node.classList.toggle('revealed');
         toggle.setAttribute('aria-expanded', String(open));
-        toggle.textContent = open ? 'Hide the inside' : 'What happened inside?';
+        toggle.textContent = open ? 'Hide the inside' : (spec.reveal ?? 'What happened inside?');
       });
 
       node.hidden = false;
       node.classList.remove('revealed');
-      // The diagram has a legible floor: scaled to a phone it becomes 300px wide and the
-      // labels turn to fuzz. It scrolls inside its own box instead, so the page never does.
-      node.replaceChildren(hook, toggle, el('div', { class: 'mech-scroll' }, figure));
+      node.replaceChildren(
+        el('p', { class: 'mech-hook' }, spec.hook),
+        toggle,
+        // The diagram has a legible floor: scaled to a phone it becomes 300px wide and the
+        // labels turn to fuzz. It scrolls inside its own box so the page never does.
+        el('div', { class: 'mech-scroll' }, diagram(spec))
+      );
     },
   };
 }

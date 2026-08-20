@@ -13,8 +13,12 @@ import { DEFAULT_MODEL } from './demos.js';
 
 export { MissingKeyError };
 
+// Demo-only for now: the site ships without a way to supply a key, so every number on it
+// is fabricated and nothing is called. The live path below is intact and unreferenced —
+// re-enabling it means restoring the settings panel and returning `FORCE_DEMO || !getKey()`
+// here, not rebuilding the client.
 export function isDemo() {
-  return FORCE_DEMO || !getKey();
+  return true;
 }
 
 export function getCatalog() {

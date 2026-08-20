@@ -18,24 +18,19 @@ removed on its own.
 
 ## Where the API key lives
 
-Nowhere. There is no server and no shared key.
+Nowhere, and there is currently no way to supply one. Every number on the site is fabricated
+to be representative, and no request leaves the page.
 
-The page calls `generativelanguage.googleapis.com` directly from the browser — Google sends
-CORS headers and accepts the preflighted `x-goog-api-key` POST, which is what makes a
-backend unnecessary. Each visitor pastes their own key; it is held in their browser and sent
-to exactly one place, Google.
+The live client is still in the repo and unreferenced: [`web/gemini.js`](web/gemini.js) calls
+`generativelanguage.googleapis.com` directly from the browser, which works because Google
+sends CORS headers and accepts the preflighted `x-goog-api-key` POST. Turning it back on
+means restoring the settings panel and returning `FORCE_DEMO || !getKey()` from `isDemo()` in
+[`web/api.js`](web/api.js) — not rebuilding anything.
 
-This removes every problem a shared key created: no quota split between strangers, no bill
-the site owner pays for someone else's clicking, and no secret that a static file was never
-able to keep anyway.
-
-What it does not remove: anything running in the page can read the key — browser extensions
-with page access, or any XSS bug here. So "remember on this device" is opt-in rather than
-the default (otherwise the key lives only until the tab closes), the key is never rendered
-in full, and the panel says to use a key restricted to the Generative Language API.
-
-Keys are validated with a `countTokens` call before being stored — no generation, no quota
-spent, and a wrong key fails immediately instead of on first use.
+That path was designed so a visitor brings their own key, held in their browser and sent only
+to Google. It removes every problem a shared key creates: no quota split between strangers,
+no bill the owner pays for someone else's clicking, and no secret a static file was never
+able to keep.
 
 ## Running it locally
 
@@ -47,15 +42,13 @@ That is the whole thing — no build, no install, no key needed to look around. 
 GitHub Pages via [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on push to
 `main`; set the repo's Pages source to **GitHub Actions**, not "deploy from a branch".
 
-## Demo mode
+## The numbers
 
-**With no key, the whole page works on fabricated numbers.** Every card runs, every
-comparison fills in, nothing is called. That is the default a first-time visitor gets, and
-it is why this is publishable without anyone's key being spent. A banner says so
-permanently, because the rest of the time the page's claim is that its numbers are real.
-
-Adding a key switches every card to live calls. `?demo` forces fabricated data back on even
-when a key is present — useful for working on the UI without spending quota.
+Every figure on the site is fabricated. Where a value was measured against the real API
+while the card was being built, the fixture carries that measurement — the tokenizer
+comparisons, the thinking split, the reasoning-effort ladder — so the ratios a reader sees
+match what the API actually did. Where it was not, the fixture is a plausible reconstruction.
+Either way the banner says so, on every card and on every visit.
 
 ## The cards
 

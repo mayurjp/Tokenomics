@@ -73,29 +73,8 @@ main > header {
   gap: 1rem; margin-bottom: 1.5rem;
 }
 
-.icon-button {
-  position: relative;
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 2.25rem; height: 2.25rem; padding: 0;
-  background: transparent; color: var(--muted);
-  border: 1px solid var(--line); border-radius: 8px;
-}
-.icon-button:hover { color: var(--fg); border-color: var(--accent); }
-.icon-button[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
 
-/* The only always-visible signal of which mode the page is in once the banner is gone. */
-.key-dot {
-  position: absolute; top: -3px; right: -3px;
-  width: .5rem; height: .5rem; border-radius: 50%;
-  background: var(--accent); border: 2px solid var(--bg);
-  display: none;
-}
-.icon-button.has-key .key-dot { display: block; }
 
-.linklike {
-  padding: 0; background: none; border: 0; color: var(--accent);
-  font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer;
-}
 h2 { font-size: 1.15rem; margin: 0; }
 h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 .9rem; }
 h4 { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 1.25rem 0 .5rem; font-weight: 400; }
@@ -275,51 +254,6 @@ details.sent > summary { cursor: pointer; font-size: .8rem; color: var(--muted);
 .ref-table td { font-variant-numeric: tabular-nums; }
 .source { margin-top: 1rem; font-style: italic; }
 
-/* ---- key panel ---- */
-.keypanel {
-  border: 1px solid var(--line); border-radius: 10px;
-  padding: 1rem 1.25rem; margin-bottom: 1.25rem; background: var(--panel);
-}
-.keypanel[hidden] { display: none; }
-.key-row { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
-.key-opts { margin-top: .6rem; }
-.keypanel input[type="password"] {
-  flex: 1 1 18rem; min-width: 0;
-  padding: .55rem .75rem;
-  border: 1px solid var(--line); border-radius: 7px;
-  background: var(--bg); color: var(--fg);
-  font: .9rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-.keypanel input[type="password"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-.keypanel p { margin: .9rem 0 0; max-width: 46rem; }
-.key-status { font-size: .85rem; }
-.key-status.error { color: var(--error); }
-
-.key-live { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
-.key-live code { font-size: .85rem; padding: .1rem .35rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
-
-button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; }
-button.ghost:hover { color: var(--fg); border-color: var(--accent); }
-
-
-.cost { margin: .6rem 0 0; font-variant-numeric: tabular-nums; }
-.cost strong { font-size: 1.05rem; }
-.block { display: block; margin-top: .15rem; }
-
-.money {
-  margin: .75rem 0 0; padding: .8rem 1rem;
-  border-left: 3px solid var(--muted); background: var(--bg);
-  border-radius: 0 6px 6px 0;
-}
-
-
-.batch-status { margin-top: 1rem; }
-.batch-status p { margin: 0 0 .35rem; }
-.batch-status code { font-size: .8rem; }
-
-.ref-table tr.hit th, .ref-table tr.hit td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
-.hit-badge { color: var(--accent); font-weight: 600; }
-
 /* ---- token flow diagram ---- */
 .flow { margin: 0 0 1.5rem; padding: 0; }
 .flow-explain { margin: 0 0 1.1rem; font-size: .9rem; max-width: 44rem; color: var(--fg); }
@@ -466,7 +400,6 @@ button.ghost, .mech-toggle, .backbar-button, .chip { background: var(--bg); box-
 .money { border-left-color: color-mix(in srgb, var(--card) 55%, transparent); }
 .stats tr.mark th, .stats tr.mark td { color: var(--card-ink); }
 .demo-banner { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
-.icon-button[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
 
 /* Panels sit on white inside a card, so they need their own surface now the page is tinted. */
 .keypanel, .session { background: var(--panel); box-shadow: var(--card-shadow); border-color: transparent; border-radius: 12px; }

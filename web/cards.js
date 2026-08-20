@@ -27,6 +27,7 @@ const gen = (demoId) => (ctx) => ctx.demos?.[demoId]?.variants?.[0]?.endpoint ??
 export const CARDS = [
   {
     id: 'count-anything',
+    hue: '#0891b2',
     title: 'Tokenizer',
     lesson: 'Count any text. Tokens are not words, and not characters.',
     endpoint: count,
@@ -34,6 +35,7 @@ export const CARDS = [
   },
   {
     id: 'same-meaning',
+    hue: '#0d9488',
     title: 'Phrasing Cost',
     lesson: 'The same meaning can cost several times more, depending on how it is written.',
     endpoint: count,
@@ -41,6 +43,7 @@ export const CARDS = [
   },
   {
     id: 'measure-call',
+    hue: '#2563eb',
     title: 'Baseline Call',
     lesson: 'One real call, reporting exactly what it spent.',
     endpoint: gen('single-call'),
@@ -48,6 +51,7 @@ export const CARDS = [
   },
   {
     id: 'thinking-cost',
+    hue: '#7c3aed',
     title: 'Thinking Tokens',
     lesson: 'Newer models reason before answering, and you pay for reasoning you never see.',
     endpoint: gen('thinking'),
@@ -78,6 +82,7 @@ export const CARDS = [
   },
   {
     id: 'caching',
+    hue: '#4f46e5',
     title: 'Prompt Caching',
     lesson: 'Send the same long prompt twice and the second call reads part of it from cache.',
     tradeoff:
@@ -87,6 +92,7 @@ export const CARDS = [
   },
   {
     id: 'model-routing',
+    hue: '#059669',
     title: 'Model Routing',
     lesson: 'The same prompt costs different amounts on different model tiers.',
     tradeoff:
@@ -96,6 +102,7 @@ export const CARDS = [
   },
   {
     id: 'lean-prompt',
+    hue: '#d97706',
     title: 'System Prompt Bloat',
     lesson: 'A bloated system prompt is paid for on every single request, forever.',
     tradeoff:
@@ -105,6 +112,7 @@ export const CARDS = [
   },
   {
     id: 'output-cap',
+    hue: '#ea580c',
     title: 'Output Capping',
     lesson: 'Output is the expensive half, and its length is controllable.',
     tradeoff:
@@ -114,6 +122,7 @@ export const CARDS = [
   },
   {
     id: 'structured-output',
+    hue: '#c026d3',
     title: 'Structured Output',
     lesson: 'Asking for JSON usually costs fewer output tokens than asking for sentences.',
     tradeoff:
@@ -123,6 +132,7 @@ export const CARDS = [
   },
   {
     id: 'rag-vs-stuffing',
+    hue: '#e11d48',
     title: 'Retrieval vs Stuffing',
     lesson: 'Sending only the relevant passage beats sending the whole document.',
     tradeoff:
@@ -132,6 +142,7 @@ export const CARDS = [
   },
   {
     id: 'context-compression',
+    hue: '#0284c7',
     title: 'Context Compression',
     lesson: 'A long conversation can be summarized instead of replayed verbatim.',
     tradeoff:
@@ -141,6 +152,7 @@ export const CARDS = [
   },
   {
     id: 'batch-api',
+    hue: '#65a30d',
     title: 'Batch API',
     lesson: 'Work nobody is waiting for is billed at half price — if you can wait for it.',
     tradeoff:
@@ -150,6 +162,7 @@ export const CARDS = [
   },
   {
     id: 'semantic-caching',
+    hue: '#9333ea',
     title: 'Semantic Caching',
     lesson: 'A reworded question can reuse a previous answer and skip the model entirely.',
     tradeoff:
@@ -159,6 +172,7 @@ export const CARDS = [
   },
   {
     id: 'finops',
+    hue: '#b45309',
     title: 'FinOps',
     lesson: 'Attribution and unit economics, built on these numbers.',
     tradeoff:
@@ -187,7 +201,17 @@ export function renderCard(card, ctx) {
 
   body.setAttribute('id', `body-${card.id}`);
 
-  const node = el('article', { class: `card${endpoint ? '' : ' reference'}`, id: `card-${card.id}` }, [
+  const node = el('article', {
+    class: `card${endpoint ? '' : ' reference'}`,
+    id: `card-${card.id}`,
+    // Each lesson carries its own hue, so the grid is scannable by colour and a card keeps
+    // its identity when it becomes the whole page. Everything colourful downstream reads
+    // this one variable.
+    // The raw hue goes on the element; --card is derived from it in CSS, which is what
+    // lets dark mode lighten every card with one rule instead of fourteen. An inline
+    // --card would outrank that rule.
+    style: `--card-raw: ${card.hue}`,
+  }, [
     head,
     // Collapsed tiles are too narrow for the full path, and a truncated URL teaches
     // nothing — so the method name shows in the grid and the full path on expand.

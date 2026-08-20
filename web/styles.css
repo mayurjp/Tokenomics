@@ -1,35 +1,50 @@
 :root {
   --bg: #ffffff;
-  --fg: #1a1a1a;
-  --muted: #6b7280;
-  --line: #e5e7eb;
-  --panel: #f9fafb;
-  --accent: #1d4ed8;
-  --error: #b91c1c;
+  --fg: #17171c;
+  --muted: #61667a;
+  --line: #e6e6ef;
+  --panel: #ffffff;
+  --accent: #5b3df5;
+  --error: #d92d3c;
+
+  /* The page sits on a soft wash rather than flat white, so the cards read as cards. */
+  --page: radial-gradient(1100px 620px at 12% -8%, #ede9ff 0%, transparent 60%),
+          radial-gradient(900px 520px at 88% 0%, #dff5f4 0%, transparent 55%),
+          #f7f7fb;
+  --card-shadow: 0 1px 2px rgba(20, 20, 45, .05), 0 8px 22px -12px rgba(20, 20, 45, .18);
+  --card-shadow-hover: 0 2px 4px rgba(20, 20, 45, .07), 0 18px 40px -16px rgba(20, 20, 45, .28);
+  /* Fallback for anything rendered outside a card, which owns no hue of its own. */
+  --card: var(--accent);
 
   /* Diagram fills. Deliberately soft — the bar should read as a quiet illustration, not a
      chart competing with the numbers beside it. Thinking carries the accent because it is
      the part of the lesson people do not expect. */
-  --flow-input: #b6c2d2;
-  --flow-cache: #d8e2f0;
-  --flow-think: #4f7dd8;
-  --flow-output: #4aa79a;
+  --flow-input: #b8bfd4;
+  --flow-cache: #dde3f5;
+  --flow-think: #6d4df0;
+  --flow-output: #12a594;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111318;
-    --fg: #e8eaed;
-    --muted: #9aa0a6;
-    --line: #2c303a;
-    --panel: #191c22;
-    --accent: #7aa2ff;
-    --error: #f28b82;
+    --bg: #14161d;
+    --fg: #e9eaf2;
+    --muted: #9ba1b5;
+    --line: #2a2e3c;
+    --panel: #191c25;
+    --accent: #a48bff;
+    --error: #ff8a94;
 
-    --flow-input: #49556b;
-    --flow-cache: #333f56;
-    --flow-think: #6f9bff;
-    --flow-output: #3f9d92;
+    --page: radial-gradient(1100px 620px at 12% -8%, #201b3d 0%, transparent 60%),
+            radial-gradient(900px 520px at 88% 0%, #102b30 0%, transparent 55%),
+            #0d0f15;
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 26px -14px rgba(0, 0, 0, .7);
+    --card-shadow-hover: 0 2px 6px rgba(0, 0, 0, .45), 0 20px 44px -18px rgba(0, 0, 0, .85);
+
+    --flow-input: #4b5268;
+    --flow-cache: #343a52;
+    --flow-think: #9b7dff;
+    --flow-output: #2fb8a4;
   }
 }
 
@@ -37,7 +52,8 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--page);
+  background-attachment: fixed;
   color: var(--fg);
   font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
@@ -457,3 +473,97 @@ details.apiswitch > p { margin-top: .9rem; max-width: 44rem; }
 #cards.detail .card.open h2:focus,
 #cards.detail .card.open h2:focus-visible { outline: none; }
 #cards.detail .card.open .lesson { font-size: 1rem; max-width: 46rem; }
+
+/* ============================================================================
+   Colour system
+   Each card carries --card, its own hue. Chrome is coloured; body text is not —
+   the numbers have to stay the most legible thing on the page.
+   ========================================================================= */
+
+/* --card is the vivid hue, for bars, borders and fills where contrast rules do not apply.
+   --card-ink is the same hue darkened enough to be legible as small text on white: seven
+   of the fourteen fell below 4.5:1 at 11.5px when text used the raw hue. */
+.card {
+  --card: var(--card-raw, var(--accent));
+  --card-ink: color-mix(in srgb, var(--card-raw, var(--accent)) 62%, black);
+}
+
+/* Dark mode lifts the hues off the background instead, and text needs no darkening there. */
+@media (prefers-color-scheme: dark) {
+  .card {
+    --card: color-mix(in srgb, var(--card-raw, var(--accent)) 58%, white);
+    --card-ink: color-mix(in srgb, var(--card-raw, var(--accent)) 52%, white);
+  }
+}
+
+h1 {
+  background: linear-gradient(96deg, #5b3df5 0%, #0d9488 55%, #c026d3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@media (prefers-color-scheme: dark) {
+  h1 { background: linear-gradient(96deg, #a48bff 0%, #2fb8a4 55%, #ef7bff 100%); -webkit-background-clip: text; background-clip: text; }
+}
+
+/* ---- cards in the grid ---- */
+.card {
+  background: var(--panel);
+  box-shadow: var(--card-shadow);
+  border-radius: 14px;
+  border-color: transparent;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .16s ease, transform .16s ease;
+}
+/* The hue as a bar across the top: colourful at a glance, no cost to legibility. */
+.card::before {
+  content: '';
+  position: absolute; inset: 0 0 auto 0; height: 4px;
+  background: linear-gradient(90deg, var(--card), color-mix(in srgb, var(--card) 45%, transparent));
+}
+.card:hover { border-color: transparent; box-shadow: var(--card-shadow-hover); transform: translateY(-2px); }
+.card.open:hover { transform: none; }
+
+.card h2 { color: var(--fg); }
+.card:hover h2 { color: var(--card-ink); }
+.chevron { color: var(--card); }
+
+/* Endpoint badge picks up the card's hue. */
+.card .endpoint {
+  color: var(--card-ink);
+  border-color: color-mix(in srgb, var(--card) 28%, transparent);
+  background: color-mix(in srgb, var(--card) 8%, transparent);
+}
+
+/* Reference cards keep the dashed treatment but gain their hue too. */
+.card.reference { background: color-mix(in srgb, var(--panel) 92%, transparent); }
+
+/* ---- detail view ---- */
+#cards.detail .card.open { box-shadow: none; overflow: visible; }
+#cards.detail .card.open::before { display: none; }
+#cards.detail .card.open h2 {
+  color: var(--card-ink);
+  padding-left: .7rem;
+  border-left: 5px solid var(--card);
+}
+#cards.detail .card.open:hover h2 { color: var(--card-ink); }
+
+/* ---- controls take the active card's hue ---- */
+button { background: var(--card); box-shadow: 0 1px 2px rgba(20,20,45,.16); }
+button:hover:not(:disabled) { filter: saturate(1.15) brightness(1.06); }
+.chip.active { background: var(--card); border-color: var(--card); }
+.chip:hover:not(.active) { border-color: var(--card); color: var(--card-ink); }
+button.ghost, .mech-toggle, .backbar-button, .chip { background: var(--bg); box-shadow: none; }
+.mech-toggle:hover, .backbar-button:hover { border-color: var(--card); color: var(--card-ink); }
+
+/* ---- accents that used the single blue ---- */
+.savings, .predict-outcome { border-left-color: var(--card); }
+.money { border-left-color: color-mix(in srgb, var(--card) 55%, transparent); }
+.stats tr.mark th, .stats tr.mark td { color: var(--card-ink); }
+.demo-banner { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+.icon-button[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+
+/* Panels sit on white inside a card, so they need their own surface now the page is tinted. */
+.keypanel, .session { background: var(--panel); box-shadow: var(--card-shadow); border-color: transparent; border-radius: 12px; }
+pre, textarea, .flow-chip { background: color-mix(in srgb, var(--fg) 3%, var(--bg)); }

@@ -62,7 +62,10 @@ function caching(runs) {
       { label: 'charged in full', tokens: fresh, fate: 'billed' },
     ],
     out: [{ label: 'answers', tokens: s.output_tokens, fate: 'delivered', outcome: 'you read this' }],
-    ...billing(second),
+    // Not billing(): the total here is close to the uncached call's and would read as
+    // "barely cheaper" if left unqualified. The rate is what changed, not the count.
+    billed: `${n(s.total_tokens)} tokens, ${n(cached)} of them at a tenth of the input rate`,
+    cost: `${usd(atVolume(costOf(second.stats, second.model)))} / ${RUNS_PER_MONTH.toLocaleString()} runs`,
     summary: `Of ${n(s.input_tokens)} input tokens, ${n(cached)} were served from cache at a ` +
       `reduced rate and ${n(fresh)} were charged in full.`,
   };

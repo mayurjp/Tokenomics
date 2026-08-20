@@ -55,6 +55,7 @@ const secs = (ms) => (ms >= 10000 ? `${(ms / 1000).toFixed(0)}s` : `${(ms / 1000
 function barRow(label, stats, scaleMax, model, durationMs) {
   const segs = segmentsFor(stats);
   const total = segs.reduce((n, s) => n + s.value, 0);
+  const cached = stats.cache_read_tokens ?? 0;
 
   const bar = el('div', {
     class: 'flow-bar',
@@ -87,9 +88,18 @@ function barRow(label, stats, scaleMax, model, durationMs) {
     ]),
     // Total, time and money in one cell. These used to be a savings line, a money line and
     // two per-column cost blocks, all restating this row.
+    //
+    // "billed" is only honest when every token is charged at full rate. Cached input is
+    // counted in promptTokenCount like any other token but charged at about a tenth, so a
+    // cached run has a total close to an uncached one while costing a quarter as much —
+    // calling that number "billed" invites exactly the wrong conclusion.
     el('div', { class: 'flow-total' }, [
       el('strong', {}, total.toLocaleString()),
-      el('span', { class: 'muted' }, ' billed'),
+      el('span', { class: 'muted' }, cached > 0 ? ' tokens' : ' billed'),
+      cached > 0
+        ? el('span', { class: 'muted small block' },
+            `${cached.toLocaleString()} of them at a tenth of the rate`)
+        : null,
       el('span', { class: 'muted small block' },
         [durationMs ? secs(durationMs) : null, `${usd(atVolume(costOf(stats, model)))}/mo`]
           .filter(Boolean).join(' · ')),

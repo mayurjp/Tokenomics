@@ -129,6 +129,7 @@ export const EXPLAIN = {
       'Embed the incoming question, compare it to cached questions with cosine similarity, and answer from cache above your threshold.',
       'Choose that threshold deliberately — it is the dial between saving money and answering the wrong question.',
     ],
+    caseStudy: 'Zilliz (makers of Milvus) report that in enterprise B2B applications, up to 40% of all user queries are semantically redundant. Implementing GPTCache on top of their LLM pipelines reduced API bills by nearly half.',
   },
 
   finops: {
@@ -136,5 +137,65 @@ export const EXPLAIN = {
     why: 'Total spend and cost-per-request rank features differently, and an invoice only shows you the first — so it cannot tell you where to spend your effort.',
     whyNot: 'It reduces nothing by itself. Attribution buys visibility; the savings still have to come from the techniques above.',
     how: 'Record usageMetadata against a feature tag on every call, then aggregate by feature and by request volume.',
+  },
+
+  'kv-cache': {
+    what: 'When multiple requests hit the same model concurrently with identical prefixes (like a shared system prompt), the model can cache the KV states for that prefix in memory and reuse them across requests.',
+    why: 'Massive cost and latency reduction at scale. It transforms a O(N) memory and compute problem into O(1) for the shared prefix.',
+    whyNot: 'It requires strict structural discipline: the shared prefix must be character-for-character identical and appear exactly at the start of every prompt.',
+    how: 'Place the shared context (instructions, examples, document corpus) at the very top of your prompt, and append user-specific variables at the very end.',
+    caseStudy: 'Anthropic partnered with Notion to implement Prompt Caching for their AI assistant. Because Notion passes massive amounts of user workspace data as context, prefix caching reduced Time-to-First-Token by 50% and slashed API costs by 60%.',
+  },
+
+  'prompt-compression': {
+    what: 'Using algorithmic techniques or smaller, cheaper models (like Llama-3-8B) to strip semantically redundant tokens from a prompt before sending it to a massive, expensive model.',
+    why: 'When passing huge documents (10k+ tokens) where exact phrasing doesn\'t matter, compression can shrink the token count by 3x-4x without degrading extraction accuracy.',
+    whyNot: 'Compression destroys formatting, tone, and sometimes subtle nuances. Do not use it for creative writing or strict code generation tasks.',
+    how: 'Pass the prompt through a compressor model (e.g., LLMLingua) or a smaller fine-tuned model before sending the compressed string to your final LLM endpoint.',
+    caseStudy: 'Microsoft Research released LLMLingua, demonstrating that algorithmically compressing prompts by 2x-3x before sending them to GPT-4 yields identical entity extraction accuracy while drastically cutting the $0.03/1k token inference cost.',
+  },
+
+  'agentic-multiplier': {
+    what: 'The phenomenon where autonomous agents continually append their thoughts, actions, and observations to the context window, causing token usage to grow exponentially with each reasoning step.',
+    why: 'Understanding this prevents "bill shock" when deploying multi-agent systems like ReAct or AutoGen.',
+    whyNot: 'It is a warning, not a feature. The goal is to break the loop by persisting state elsewhere.',
+    how: 'Instead of passing the entire trajectory string back to the model, parse the agent\'s state into a JSON object and pass only the current state summary and the latest observation.',
+    caseStudy: 'Engineers deploying Microsoft AutoGen into production discovered that unmanaged agent histories caused context windows to balloon exponentially in just 10 turns. They had to implement strict state-pruning to remain economically viable.',
+  },
+
+  'finetune-vs-rag': {
+    what: 'The mathematical breakeven point between the upfront compute cost of fine-tuning a model versus the recurring input token costs of sending retrieved context (RAG) on every request.',
+    why: 'To make informed infrastructure decisions based on your actual request volume.',
+    whyNot: 'Cost is only one dimension. RAG allows for real-time updates and permissions, whereas fine-tuning bakes knowledge into static weights.',
+    how: 'Calculate: (Fine-tune Cost + (Volume * Base Input Cost)) vs (Volume * (Base Input + Retrieved Tokens Cost)). See the calculator on this card.',
+  },
+
+  multimodal: {
+    what: 'Image tokenization works by slicing images into tiles (e.g., 512x512). A fixed token count is charged per tile.',
+    why: 'To accurately estimate costs for Vision pipelines, where high-res images can silently explode your token usage.',
+    whyNot: 'Downscaling too much to save tokens can cause the model to hallucinate or miss critical visual details.',
+    how: 'Scale your images down on the client side so they span exactly the minimum number of 512x512 tiles required for the task.',
+  },
+
+  'quadratic-attention': {
+    what: 'The core self-attention mechanism in Transformers scales quadratically. A 100k context window requires 100x more compute (and thus cost/latency) than a 10k window, not 10x.',
+    why: 'Understanding this explains why providers charge a premium for long-context models, and why you should keep prompts as short as mathematically possible.',
+    whyNot: 'Sometimes you simply need the model to read a massive document. In those cases, you have to pay the O(N²) tax.',
+    how: 'Use RAG, summarization pipelines, or sliding-window attention to bound the context length to a linear or smaller scale.',
+  },
+
+  'speculative-decoding': {
+    what: 'Using a small "draft" model to predict the next few tokens, and using a massive "target" model to verify them all at once in parallel.',
+    why: 'It drastically reduces generation latency (Time Per Output Token). The target model does 1 parallel pass instead of 5 sequential passes.',
+    whyNot: 'If the draft model is too inaccurate, the target model rejects the tokens and you waste compute. It only works well if the draft model has a high acceptance rate.',
+    how: 'This is an infrastructure-level optimization (e.g., using vLLM or specific provider endpoints). As an API user, seek out providers that use this internally.',
+    caseStudy: 'Google DeepMind heavily utilizes Speculative Decoding in their Gemini infrastructure. Using a tiny 1B draft model alongside a massive 70B target model increases tokens-per-second (TPS) by 2.5x without changing the final output.',
+  },
+
+  'schema-minification': {
+    what: 'JSON schemas for tool calling and structured output are sent as input tokens on every turn. Shortening keys and descriptions saves massive token volume.',
+    why: 'In a 10-turn agentic loop, a 1,000-token OpenAPI schema costs 10,000 input tokens. Minifying it to 300 tokens saves 7,000 tokens.',
+    whyNot: 'If you shorten a description too much, the model might not understand how to use the tool correctly, causing a logic failure.',
+    how: 'Use Enums instead of verbose descriptions, shorten parameter names (e.g., "usr_id" instead of "user_account_identification_number"), and strip out redundant instructions.',
   },
 };

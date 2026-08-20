@@ -53,6 +53,7 @@ export function renderExplain(explain, demo) {
       ...row('What', explain.what),
       ...row('Why', explain.why, 'is-why'),
       ...row('Why not', explain.whyNot, 'is-whynot'),
+      ...(explain.caseStudy ? row('Case Study', explain.caseStudy, 'is-casestudy') : []),
       ...row('How', el('div', {}, [
         steps.length === 1
           ? el('p', { class: 'how-step' }, steps[0])

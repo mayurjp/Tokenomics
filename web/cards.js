@@ -20,6 +20,7 @@ import { runnerCard } from './cards-run.js';
 import { batchCard } from './cards-batch.js';
 import { semanticCacheCard } from './cards-semantic.js';
 import { finopsCard } from './cards-finops.js';
+import { kvCacheCard, promptCompressionCard, agenticMultiplierCard, roiCalculatorCard, multimodalCard, quadraticAttentionCard, speculativeDecodingCard, schemaMinificationCard } from './cards-advanced.js';
 
 const count = (ctx) => ctx.countEndpoint ?? null;
 const gen = (demoId) => (ctx) => ctx.demos?.[demoId]?.variants?.[0]?.endpoint ?? null;
@@ -173,6 +174,70 @@ export const CARDS = [
     endpoint: () => 'POST /v1beta/models/gemini-3.5-flash:generateContent',
     mount: finopsCard,
   },
+  {
+    id: 'kv-cache',
+    title: 'KV Cache & Prefix Sharing',
+    lesson: 'Caching massive system prompts across concurrent users.',
+    endpoint: () => null,
+    mount: kvCacheCard,
+    advanced: true,
+  },
+  {
+    id: 'prompt-compression',
+    title: 'Prompt Compression',
+    lesson: 'Using smaller models to algorithmically strip redundant tokens.',
+    endpoint: () => null,
+    mount: promptCompressionCard,
+    advanced: true,
+  },
+  {
+    id: 'agentic-multiplier',
+    title: 'The Multi-Agent Multiplier',
+    lesson: 'Watch token costs balloon as agents constantly append history.',
+    endpoint: () => null,
+    mount: agenticMultiplierCard,
+    advanced: true,
+  },
+  {
+    id: 'finetune-vs-rag',
+    title: 'Fine-Tuning vs RAG ROI',
+    lesson: 'Calculate when the upfront fine-tuning cost beats recurring retrieval costs.',
+    endpoint: () => null,
+    mount: roiCalculatorCard,
+    advanced: true,
+  },
+  {
+    id: 'multimodal',
+    title: 'Multimodal Tokenomics',
+    lesson: 'Images are sliced into tiles. Understand how resolution explodes your token count.',
+    endpoint: () => null,
+    mount: multimodalCard,
+    advanced: true,
+  },
+  {
+    id: 'quadratic-attention',
+    title: 'The O(N²) Problem',
+    lesson: 'Why massive context windows scale quadratically in compute cost.',
+    endpoint: () => null,
+    mount: quadraticAttentionCard,
+    advanced: true,
+  },
+  {
+    id: 'speculative-decoding',
+    title: 'Speculative Decoding',
+    lesson: 'Trading a tiny bit of extra compute for massive generation speed.',
+    endpoint: () => null,
+    mount: speculativeDecodingCard,
+    advanced: true,
+  },
+  {
+    id: 'schema-minification',
+    title: 'Schema Minification',
+    lesson: 'Bloated tool schemas are a massive hidden cost per agentic turn.',
+    endpoint: () => null,
+    mount: schemaMinificationCard,
+    advanced: true,
+  },
 ];
 
 export function renderCard(card, ctx) {
@@ -197,6 +262,7 @@ export function renderCard(card, ctx) {
   const node = el('article', {
     class: `card${endpoint ? '' : ' reference'}`,
     id: `card-${card.id}`,
+    'data-advanced': card.advanced ? 'true' : 'false',
     // Each lesson carries its own hue, so the grid is scannable by colour and a card keeps
     // its identity when it becomes the whole page. Everything colourful downstream reads
     // this one variable.

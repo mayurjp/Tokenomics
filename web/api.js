@@ -18,7 +18,7 @@ export { MissingKeyError };
 // re-enabling it means restoring the settings panel and returning `FORCE_DEMO || !getKey()`
 // here, not rebuilding the client.
 export function isDemo() {
-  return true;
+  return FORCE_DEMO || !getKey();
 }
 
 export function getCatalog() {

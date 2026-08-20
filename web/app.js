@@ -4,6 +4,7 @@
 import { el } from './dom.js';
 import { getCatalog, isDemo, resetCaches } from './api.js';
 import { CARDS, renderCard } from './cards.js';
+import { mountSettings } from './settings.js';
 
 const SITE_TITLE = 'Token Economics Explorer';
 
@@ -113,6 +114,35 @@ document.addEventListener('DOMContentLoaded', () => {
   // Switching modes rebuilds every card from scratch. Half-rendered results from the other
   // mode would be worse than losing them: fabricated numbers sitting next to real ones,
   // with nothing on screen saying which was which.
+  mountSettings('settings-panel');
   paintBanner();
   mountCards();
+
+  document.getElementById('toggle-settings').addEventListener('click', () => {
+    const panel = document.getElementById('settings-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Tier toggle logic
+  const btnStandard = document.getElementById('toggle-standard');
+  const btnAdvanced = document.getElementById('toggle-advanced');
+  
+  if (btnStandard && btnAdvanced) {
+    btnStandard.addEventListener('click', () => {
+      document.body.classList.remove('show-advanced');
+      btnStandard.classList.add('active');
+      btnAdvanced.classList.remove('active');
+      // Re-run routing in case they were inside an advanced card that just got hidden
+      if (!cardIds().has(activeId()) || CARDS.find(c => c.id === activeId())?.advanced) {
+        history.replaceState(null, '', location.pathname + location.search);
+        route();
+      }
+    });
+    
+    btnAdvanced.addEventListener('click', () => {
+      document.body.classList.add('show-advanced');
+      btnAdvanced.classList.add('active');
+      btnStandard.classList.remove('active');
+    });
+  }
 });

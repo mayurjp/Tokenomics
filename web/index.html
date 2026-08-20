@@ -9,6 +9,11 @@
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 
+    <!-- Premium Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Link previews. og:image must be an absolute URL and a raster format — LinkedIn and
          Slack will not render an SVG here. -->
     <meta property="og:type" content="website" />
@@ -35,8 +40,16 @@
           <img class="brand-mark" src="icon.svg" alt="" width="30" height="30" />
           <h1>Token Economics Explorer</h1>
         </a>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <button type="button" id="toggle-settings" class="ghost" style="padding: 0.4rem 0.8rem;">⚙️ Settings</button>
+          <div class="tier-toggle">
+            <button type="button" id="toggle-standard" class="active">Standard</button>
+            <button type="button" id="toggle-advanced">Advanced</button>
+          </div>
+        </div>
       </header>
 
+      <div id="settings-panel" style="display: none;"></div>
       <div id="demo-banner"></div>
       <nav id="backbar" hidden></nav>
       <section id="cards"><p class="muted">Loading&hellip;</p></section>

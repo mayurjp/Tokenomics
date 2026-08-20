@@ -136,6 +136,12 @@ h4 { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color:
 .card-body { display: none; }
 .card.open .card-body { display: block; margin-top: 1.25rem; }
 
+/* The explain block belongs to the lesson, not to the tile. A grid of fourteen what/why/
+   how blocks is a wall of text, which is the opposite of an overview — the tile carries
+   the name, the endpoint and one line, and that is the whole job. */
+.card .explain { display: none; }
+.card.open .explain { display: block; }
+
 .card-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: .75rem;
   cursor: pointer;

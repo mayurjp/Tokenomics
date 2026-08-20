@@ -47,7 +47,9 @@ export const CARDS = [
     title: 'Baseline Call',
     lesson: 'One real call, reporting exactly what it spent.',
     endpoint: gen('single-call'),
-    mount: runnerCard('single-call', { runLabel: 'Run' }),
+    mount: runnerCard('single-call', { runLabel: 'Run', compact: true,
+      flow: true,
+      apiSwitch: true, }),
   },
   {
     id: 'thinking-cost',
@@ -88,67 +90,169 @@ export const CARDS = [
     tradeoff:
       'Only pays off if the stable part comes first and stays byte-identical. Implicit caching is opportunistic, so it cannot be relied on for a given call — and reordering a prompt to suit it can make it harder to read.',
     endpoint: gen('caching'),
-    mount: runnerCard('caching', { runLabel: 'Run twice' }),
+    mount: runnerCard('caching', { runLabel: 'Run twice', compact: true,
+      flow: true,
+      apiSwitch: true, }),
   },
   {
     id: 'model-routing',
+    hasTradeoffPanel: true,
     hue: '#059669',
     title: 'Model Routing',
     lesson: 'The same prompt costs different amounts on different model tiers.',
     tradeoff:
       'A cheaper tier is cheaper because it is less capable. The saving is real until a request needs the capability you routed away from, and detecting that reliably is its own problem.',
     endpoint: gen('routing'),
-    mount: runnerCard('routing', { runLabel: 'Run on each tier' }),
+    mount: runnerCard('routing', {
+      runLabel: 'Run on each tier',
+      compact: true,
+      flow: true,
+      apiSwitch: true,
+      tradeoffs: {
+        'gemini-3.1-flash-lite': {
+          gain: ['Fast and cheap enough to put in front of every request'],
+          lose: ['Runs out of depth on anything requiring several steps held at once'],
+        },
+        'gemini-3.5-flash': {
+          gain: ['Handles most production work without thinking about it'],
+          lose: ['You are paying mid-tier rates on requests a lite model would have answered'],
+        },
+        'gemini-3.1-pro-preview': {
+          gain: ['The one that still works when the others start guessing'],
+          lose: ['Wasted on classification, extraction and formatting, which is most traffic'],
+        },
+      },
+    }),
   },
   {
     id: 'lean-prompt',
+    hasTradeoffPanel: true,
     hue: '#d97706',
     title: 'System Prompt Bloat',
     lesson: 'A bloated system prompt is paid for on every single request, forever.',
     tradeoff:
       'Every instruction you delete is behaviour you stop controlling. Trimming a system prompt is safe until you remove the line that was preventing the failure mode you forgot about.',
     endpoint: gen('system-prompt'),
-    mount: runnerCard('system-prompt', { runLabel: 'Run both' }),
+    mount: runnerCard('system-prompt', {
+      runLabel: 'Run both',
+      compact: true,
+      flow: true,
+      apiSwitch: true,
+      tradeoffs: {
+        'bloated system prompt': {
+          gain: ['Every rule you ever needed is stated somewhere in it'],
+          lose: ['Resent in full on every request for the life of the feature'],
+        },
+        'lean system prompt': {
+          gain: ['The saving is permanent and scales with traffic'],
+          lose: ['Each line you cut is behaviour you stop controlling — including the failure you have forgotten about'],
+        },
+      },
+    }),
   },
   {
     id: 'output-cap',
+    hasTradeoffPanel: true,
     hue: '#ea580c',
     title: 'Output Capping',
     lesson: 'Output is the expensive half, and its length is controllable.',
     tradeoff:
       'A hard cap truncates mid-sentence rather than answering briefly. Pair it with an instruction to be concise, or you pay for output that gets cut off and thrown away.',
     endpoint: gen('output-cap'),
-    mount: runnerCard('output-cap', { runLabel: 'Run both' }),
+    mount: runnerCard('output-cap', {
+      runLabel: 'Run both',
+      compact: true,
+      flow: true,
+      apiSwitch: true,
+      tradeoffs: {
+        'no limit': {
+          gain: ['The answer always finishes its sentence'],
+          lose: ['Length is set by the model, so the bill is decided by something you do not control'],
+        },
+        'capped at 60 tokens': {
+          gain: ['A hard ceiling on the expensive half of the bill'],
+          lose: ['Truncates mid-sentence rather than answering briefly — pair it with an instruction to be concise, or you pay for output that gets thrown away'],
+        },
+      },
+    }),
   },
   {
     id: 'structured-output',
+    hasTradeoffPanel: true,
     hue: '#c026d3',
     title: 'Structured Output',
     lesson: 'Asking for JSON usually costs fewer output tokens than asking for sentences.',
     tradeoff:
       'You get fields, not reasoning. Fine when the result is data; bad when the user needed the explanation, and it requires you to define and maintain the schema.',
     endpoint: gen('structured'),
-    mount: runnerCard('structured', { runLabel: 'Run both' }),
+    mount: runnerCard('structured', {
+      runLabel: 'Run both',
+      compact: true,
+      flow: true,
+      apiSwitch: true,
+      tradeoffs: {
+        'as prose': {
+          gain: ['Readable by a person with no parsing step'],
+          lose: ['Pays output rates for transitions, hedging and restatement'],
+        },
+        'as JSON': {
+          gain: ['Cheaper, and consumable by code without guessing'],
+          lose: ['You get fields, not reasoning — and a schema to define and maintain'],
+        },
+      },
+    }),
   },
   {
     id: 'rag-vs-stuffing',
+    hasTradeoffPanel: true,
     hue: '#e11d48',
     title: 'Retrieval vs Stuffing',
     lesson: 'Sending only the relevant passage beats sending the whole document.',
     tradeoff:
       'Retrieval can fetch the wrong passage, and then the model answers confidently from the wrong context. It also adds a store, an index and an embedding step to run and pay for.',
     endpoint: gen('rag'),
-    mount: runnerCard('rag', { runLabel: 'Run both' }),
+    mount: runnerCard('rag', {
+      runLabel: 'Run both',
+      compact: true,
+      flow: true,
+      apiSwitch: true,
+      tradeoffs: {
+        'whole document': {
+          gain: ['Nothing to build, and the answer is always somewhere in the context'],
+          lose: ['Cost scales with the document on every single request'],
+        },
+        'retrieved section': {
+          gain: ['A fixed indexing cost replaces a recurring context cost'],
+          lose: ['Retrieval can fetch the wrong passage, and the model will answer confidently from it — plus a store, an index and an embedding step to run'],
+        },
+      },
+    }),
   },
   {
     id: 'context-compression',
+    hasTradeoffPanel: true,
     hue: '#0284c7',
     title: 'Context Compression',
     lesson: 'A long conversation can be summarized instead of replayed verbatim.',
     tradeoff:
       'A summary is lossy by definition. Whatever it drops is gone from the conversation, and you will not find out which detail mattered until someone asks about it.',
     endpoint: gen('compression'),
-    mount: runnerCard('compression', { runLabel: 'Run both' }),
+    mount: runnerCard('compression', {
+      runLabel: 'Run both',
+      compact: true,
+      flow: true,
+      apiSwitch: true,
+      tradeoffs: {
+        'full history': {
+          gain: ['Nothing is lost, because nothing was thrown away'],
+          lose: ['The fastest growing cost in any chat product — every turn resends all the ones before it'],
+        },
+        'summarized history': {
+          gain: ['Per-turn cost stops growing with the conversation'],
+          lose: ['A summary is lossy by definition, and you find out which detail mattered when someone asks about it'],
+        },
+      },
+    }),
   },
   {
     id: 'batch-api',

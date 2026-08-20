@@ -567,3 +567,6 @@ button.ghost, .mech-toggle, .backbar-button, .chip { background: var(--bg); box-
 /* Panels sit on white inside a card, so they need their own surface now the page is tinted. */
 .keypanel, .session { background: var(--panel); box-shadow: var(--card-shadow); border-color: transparent; border-radius: 12px; }
 pre, textarea, .flow-chip { background: color-mix(in srgb, var(--fg) 3%, var(--bg)); }
+
+.prompts-grid { margin-bottom: 1.2rem; }
+.prompts-grid .sent { margin-bottom: 0; }

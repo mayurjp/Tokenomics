@@ -83,11 +83,13 @@ function promptBlock(variant) {
 // One column per variant, holding everything about it in one place: what was sent, what it
 // cost, what came back. Rendered before a run too, so you can read what is about to be
 // spent — with a placeholder where the numbers will go rather than an empty gap.
-function variantColumn(variant, outcome, highlight, compact) {
+function variantColumn(variant, outcome, highlight, compact, hasShared) {
   const head = [
     el('div', { class: 'pair-title muted' }, variant.label),
-    // In compact mode the prompt is identical across variants and is shown once above.
-    compact ? null : promptBlock(variant),
+    // The prompt is dropped here only when an identical one was hoisted above the columns.
+    // Where the variants genuinely differ — retrieval sends a document or a paragraph, and
+    // that difference is the lesson — each column keeps its own.
+    hasShared ? null : promptBlock(variant),
   ].filter(Boolean);
 
   if (!outcome) {
@@ -135,9 +137,20 @@ function variantColumn(variant, outcome, highlight, compact) {
 // shows both.
 const sameText = (values) => values.every((v) => v === values[0]);
 
-function sharedPromptBlock(variants) {
+// What gets sent, hoisted above the controls so it never depends on whether a run has
+// happened. One block when the variants send the same thing; a labelled block each when
+// they do not — for retrieval and compression that difference is the entire lesson, and an
+// earlier version dropped it on the floor the moment you pressed Run.
+function promptsSection(variants) {
   const keys = variants.map((v) => `${v.systemInstruction ?? ''}||${v.prompt}`);
-  return sameText(keys) ? promptBlock(variants[0]) : null;
+  if (sameText(keys)) return promptBlock(variants[0]);
+
+  return el('div', { class: 'pair-grid prompts-grid' }, variants.map((v) =>
+    el('div', {}, [
+      el('div', { class: 'pair-title muted' }, v.label),
+      promptBlock(v),
+    ])
+  ));
 }
 
 // The answers are the evidence that quality did not change, so they stay reachable — but
@@ -155,6 +168,13 @@ function answersBlock(variants, outcomes) {
       el('pre', { class: 'response small' }, r.response_text || '(empty)'),
     ]));
 
+  if (results.length === 1) {
+    return el('div', {}, [
+      el('h4', {}, 'Response'),
+      el('pre', { class: 'response small' }, texts[0] || '(empty)'),
+    ]);
+  }
+
   if (!identical) {
     return el('div', {}, [el('h4', {}, 'Responses'), el('div', { class: 'pair-grid' }, both)]);
   }
@@ -166,27 +186,20 @@ function answersBlock(variants, outcomes) {
 }
 
 // One sentence standing in for a savings line, a money line and two stats tables. The
-// numbers are already in the diagram above, so this says only what they cannot: that the
-// two runs answered the same question, and how much more one of them cost to do it.
+// numbers are already in the diagram above, so this adds only what they cannot: whether the
+// answers actually differed. The saving itself comes from summary(), which phrases it per
+// the demo's own metric — input tokens for retrieval, cache reads for caching, and so on.
 function verdictLine(demo, outcomes) {
-  const ok = demo.variants
-    .map((v, i) => ({ variant: v, result: outcomes[i]?.result }))
-    .filter((o) => o.result);
+  const line = summary(demo, outcomes);
+  if (!line) return null;
 
-  if (ok.length < 2) return null;
-
-  const totals = ok.map((o) => o.result.stats.total_tokens ?? 0);
-  const dearest = Math.max(...totals);
-  const cheapest = Math.min(...totals);
-  if (cheapest === 0) return null;
-
-  const identical = sameText(ok.map((o) => o.result.response_text || ''));
+  const texts = outcomes.map((o) => o?.result?.response_text).filter((t) => t !== undefined);
+  const identical = texts.length > 1 && sameText(texts);
 
   return el('p', { class: 'verdict' }, [
-    el('span', {}, identical ? 'Same question, same answer — ' : 'Same question — '),
-    el('strong', {}, `${(dearest / cheapest).toFixed(1)}x the cost`),
-    el('span', {}, ` for ${ok[totals.indexOf(dearest)].variant.label}.`),
-  ]);
+    identical ? el('strong', {}, 'Same answer either way. ') : null,
+    el('span', {}, line),
+  ].filter(Boolean));
 }
 
 // The summary line. Written per metric, because "68% fewer total tokens" and "1,900 tokens
@@ -273,12 +286,13 @@ export function runnerCard(demoId, options = {}) {
 
     // Columns exist from the start, holding the prompts. Running fills in the numbers
     // beneath each one rather than replacing the whole block.
+    // Compact cards show what gets sent once, above the controls, and never again.
+    const shared = compact ? promptsSection(demo.variants) : null;
+
     const columns = (outcomes) =>
       el('div', { class: 'pair-grid' },
-        demo.variants.map((v, i) => variantColumn(v, outcomes?.[i], demo.compare, compact)));
-
-    // Compact cards show the shared prompt once, above everything.
-    const shared = compact ? sharedPromptBlock(demo.variants) : null;
+        demo.variants.map((v, i) =>
+          variantColumn(v, outcomes?.[i], demo.compare, compact, compact)));
 
     button.addEventListener('click', async () => {
       button.disabled = true;

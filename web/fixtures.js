@@ -168,6 +168,23 @@ export async function demoEmbed(text) {
   return [h / 1000, ((h * 7) % 1000) / 1000, ((h * 13) % 1000) / 1000, ((h * 17) % 1000) / 1000];
 }
 
+// Which variants the live catalog genuinely sends thinkingBudget: 0 for.
+//
+// This used to be inferred from "the fixture reported no thinking tokens", which is a
+// different fact: flash-lite does not produce reasoning whether or not you ask it to. That
+// inference made demo mode claim a request field live mode never sends, and the API-switch
+// panel duly rendered a switch the routing card does not have.
+const BUDGET_ZERO = new Set([
+  'thinking/off',
+  'system-prompt/bloated', 'system-prompt/lean',
+  'output-cap/uncapped', 'output-cap/capped',
+  'structured/prose', 'structured/json',
+  'rag/stuffed', 'rag/retrieved',
+  'compression/verbatim', 'compression/summarized',
+  'semantic/ask',
+  'finops/summarizer', 'finops/rewriter', 'finops/chat',
+]);
+
 // Synchronous: with no server, the catalog is static data in both modes and there is
 // nothing to wait for.
 export function demoCatalog() {
@@ -180,7 +197,7 @@ export function demoCatalog() {
       label: LABELS[id]?.[vid] ?? vid,
       model: v.model ?? MODEL,
       endpoint: gen(v.model),
-      prompt: PROMPTS[id] ?? BASIC_PROMPT,
+      prompt: VARIANT_PROMPTS[id]?.[vid] ?? PROMPTS[id] ?? BASIC_PROMPT,
       systemInstruction: id === 'system-prompt' && vid === 'bloated'
         ? 'You are a helpful, friendly, knowledgeable and professional AI assistant. You should always be polite…'
         : id === 'system-prompt' ? 'Answer accurately and concisely in plain English.' : null,
@@ -189,8 +206,8 @@ export function demoCatalog() {
       // Mirror the live catalog's shape, not just its labels. Anything reading the
       // catalog to reconstruct a request — the API switch panel does — needs the same
       // fields in both modes, or it silently finds nothing to show in demo mode.
-      thinkingBudget: v.thinking === null && v.error === undefined ? 0 : undefined,
-      thinkingDisabled: v.thinking === null && v.error === undefined,
+      thinkingBudget: BUDGET_ZERO.has(`${id}/${vid}`) ? 0 : undefined,
+      thinkingDisabled: BUDGET_ZERO.has(`${id}/${vid}`),
     })),
   }));
 
@@ -220,6 +237,39 @@ const LABELS = {
   structured: { prose: 'as prose', json: 'as JSON' },
   rag: { stuffed: 'whole document', retrieved: 'retrieved section' },
   compression: { verbatim: 'full history', summarized: 'summarized history' },
+};
+
+// Per-variant where the live prompts genuinely differ. One prompt per demo was wrong for
+// exactly the cards whose lesson is the difference between the prompts — retrieval sends a
+// document or a paragraph, and demo mode was showing the same text for both.
+const VARIANT_PROMPTS = {
+  rag: {
+    stuffed: LONG_PROMPT_PREVIEW,
+    retrieved:
+      'SECTION 2. WHY OUTPUT COSTS MORE THAN INPUT\n\nWhen a model reads a prompt, it ' +
+      'processes the entire sequence in one parallel pass\u2026\n\n' +
+      'According to the handbook, why does output cost more than input?',
+  },
+  compression: {
+    verbatim: '[12 turns of conversation, ~380 tokens]\n\nGiven all of that, what should we do first this week?',
+    summarized:
+      'Summary of the conversation so far: the team is building a ticket summarizer for ' +
+      'morning triage\u2026\n\nGiven all of that, what should we do first this week?',
+  },
+  'output-cap': {
+    uncapped: 'Describe everything that affects the cost of running a large language model in production.',
+    capped: 'Describe everything that affects the cost of running a large language model in production. Answer in two sentences.',
+  },
+  structured: {
+    prose:
+      'Extract the invoice number, customer, amount, due date and account manager from this ' +
+      'text, and report them in prose.\n\nInvoice INV-4471 was issued to Northwind ' +
+      'Traders on 14 March 2026 for 8,450 USD, due in 30 days.',
+    json:
+      'Extract the invoice number, customer, amount, due date and account manager from this ' +
+      'text.\n\nInvoice INV-4471 was issued to Northwind Traders on 14 March 2026 ' +
+      'for 8,450 USD, due in 30 days.',
+  },
 };
 
 const PROMPTS = {

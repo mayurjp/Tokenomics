@@ -67,8 +67,10 @@ export async function countTokens(text, model, apiKey) {
 
 // Builds one generateContent request from a demo variant. The variant is the single place
 // that decides what gets sent; this only translates it into the API's shape.
-export async function generate(demo, variant, apiKey) {
-  const model = variant.model ?? demo.model;
+// Exported so the UI can show the request without hand-writing a copy of it. A card that
+// displays "this is what gets sent" next to code that sends something else is a lie waiting
+// to happen; this way the shown body is built by the same function that sends it.
+export function buildRequestBody(demo, variant) {
   const body = { contents: [{ parts: [{ text: variant.prompt }] }] };
   const generationConfig = {};
 
@@ -90,6 +92,13 @@ export async function generate(demo, variant, apiKey) {
   if (Object.keys(generationConfig).length > 0) {
     body.generationConfig = generationConfig;
   }
+
+  return body;
+}
+
+export async function generate(demo, variant, apiKey) {
+  const model = variant.model ?? demo.model;
+  const body = buildRequestBody(demo, variant);
 
   const parsed = await call(`models/${model}:generateContent`, body, apiKey);
 

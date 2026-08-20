@@ -422,3 +422,12 @@ details.answers > summary { cursor: pointer; font-size: .82rem; color: var(--mut
 .mech-stop line { stroke: var(--error); stroke-width: 2; stroke-linecap: round; }
 
 
+
+/* ---- the API switch ---- */
+details.apiswitch { margin: 0 0 1.2rem; }
+details.apiswitch > summary { cursor: pointer; font-size: .82rem; color: var(--muted); }
+.switch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1.1rem; margin-top: .8rem; }
+.switch-row .prompt { margin-top: .35rem; }
+.switch-default { margin: .35rem 0 0; }
+details.apiswitch code { font-size: .82em; padding: .05rem .25rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
+details.apiswitch > p { margin-top: .9rem; max-width: 44rem; }

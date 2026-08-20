@@ -10,6 +10,7 @@ import { createMeter } from './meter.js';
 import { createFlow } from './flow.js';
 import { createTradeoff } from './tradeoff.js';
 import { createMechanism } from './mechanism.js';
+import { createApiSwitch } from './apiswitch.js';
 import { costOf, atVolume, usd, isPriced, RUNS_PER_MONTH, PRICING_DATE } from './pricing.js';
 
 const METRIC_LABEL = {
@@ -266,6 +267,7 @@ export function runnerCard(demoId, options = {}) {
     const flow = options.flow ? createFlow(typeof options.flow === 'string' ? options.flow : null) : null;
     const trade = options.tradeoffs ? createTradeoff(options.tradeoffs, options.compact === true) : null;
     const mech = options.mechanism ? createMechanism() : null;
+    const apiSwitch = options.apiSwitch ? createApiSwitch(demo) : null;
     const compact = options.compact === true;
     const button = el('button', { type: 'button' }, options.runLabel ?? 'Run');
 
@@ -349,6 +351,7 @@ export function runnerCard(demoId, options = {}) {
       // produces them reads backwards.
       ...[
         shared,
+        apiSwitch?.node,
         el('div', { class: 'controls' }, [button]),
         flow?.node,
         mech?.node,

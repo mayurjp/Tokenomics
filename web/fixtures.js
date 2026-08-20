@@ -186,6 +186,10 @@ export function demoCatalog() {
         : id === 'system-prompt' ? 'Answer accurately and concisely in plain English.' : null,
       maxOutputTokens: v.truncated ? 60 : null,
       json: id === 'structured' && vid === 'json',
+      // Mirror the live catalog's shape, not just its labels. Anything reading the
+      // catalog to reconstruct a request — the API switch panel does — needs the same
+      // fields in both modes, or it silently finds nothing to show in demo mode.
+      thinkingBudget: v.thinking === null && v.error === undefined ? 0 : undefined,
       thinkingDisabled: v.thinking === null && v.error === undefined,
     })),
   }));

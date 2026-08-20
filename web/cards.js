@@ -58,6 +58,7 @@ export const CARDS = [
       // The diagram stays; its explainer paragraph does not, since it restated `lesson`.
       flow: true,
       mechanism: true,
+      apiSwitch: true,
       // Judgement, not measurement. The panel tags these so they cannot be mistaken for
       // findings from the run. Three a side; the rest was padding.
       tradeoffs: {

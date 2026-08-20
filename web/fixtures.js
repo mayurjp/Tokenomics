@@ -88,6 +88,13 @@ const RUNS = {
     flash: { input: 36, output: 262, thinking: 812, text: ANSWER_LONG, model: 'gemini-3.5-flash' },
     pro: { input: 36, output: 291, thinking: 1104, text: ANSWER_LONG, model: 'gemini-3.1-pro-preview' },
   },
+  // Measured on gemini-3.5-flash with this exact prompt while building the card:
+  // default 783 thinking, low 643, minimal 0. The dial is barely a dial.
+  effort: {
+    default: { input: 36, output: 267, thinking: 783, text: ANSWER_LONG },
+    low: { input: 36, output: 292, thinking: 643, text: ANSWER_LONG },
+    minimal: { input: 36, output: 256, thinking: null, text: ANSWER_LONG },
+  },
   'system-prompt': {
     bloated: { input: 178, output: 41, thinking: null, text: ANSWER_TOKEN },
     lean: { input: 19, output: 38, thinking: null, text: ANSWER_TOKEN },
@@ -207,7 +214,8 @@ export function demoCatalog() {
       // catalog to reconstruct a request — the API switch panel does — needs the same
       // fields in both modes, or it silently finds nothing to show in demo mode.
       thinkingBudget: BUDGET_ZERO.has(`${id}/${vid}`) ? 0 : undefined,
-      thinkingDisabled: BUDGET_ZERO.has(`${id}/${vid}`),
+      thinkingLevel: id === 'effort' && vid !== 'default' ? vid : null,
+      thinkingDisabled: BUDGET_ZERO.has(`${id}/${vid}`) || (id === 'effort' && vid === 'minimal'),
     })),
   }));
 
@@ -226,6 +234,7 @@ const COMPARE = {
 };
 
 const LABELS = {
+  effort: { default: 'default', low: 'thinkingLevel: low', minimal: 'thinkingLevel: minimal' },
   semantic: { ask: 'answer the question' },
   finops: { summarizer: 'Ticket summarizer', rewriter: 'Search rewriter', chat: 'Onboarding chat' },
   'single-call': { default: 'one call' },

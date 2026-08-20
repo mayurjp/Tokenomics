@@ -257,6 +257,19 @@ ${TICKET}`,
   }
 );
 
+DEMOS.push({
+  id: 'effort',
+  model: DEFAULT_MODEL,
+  compare: 'total_tokens',
+  // thinkingLevel is graded, so this is the dial rather than the switch. Which levels a
+  // model accepts varies — 3.5-flash takes all four, 3.7-flash has no "minimal".
+  variants: [
+    { id: 'default', label: 'default', prompt: BASIC_PROMPT },
+    { id: 'low', label: 'thinkingLevel: low', prompt: BASIC_PROMPT, thinkingLevel: 'low' },
+    { id: 'minimal', label: 'thinkingLevel: minimal', prompt: BASIC_PROMPT, thinkingLevel: 'minimal' },
+  ],
+});
+
 export function findDemo(id) {
   return DEMOS.find((d) => d.id === id);
 }
@@ -280,7 +293,8 @@ export function catalog(model) {
         maxOutputTokens: v.maxOutputTokens ?? null,
         json: v.json === true,
         thinkingBudget: v.thinkingBudget,
-        thinkingDisabled: v.thinkingBudget === 0,
+        thinkingLevel: v.thinkingLevel ?? null,
+        thinkingDisabled: v.thinkingBudget === 0 || v.thinkingLevel === 'minimal',
       })),
     })),
   };

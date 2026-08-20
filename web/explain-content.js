@@ -34,8 +34,19 @@ export const EXPLAIN = {
     why: 'Multi-step problems: arithmetic, planning, contradictory or ambiguous instructions, anything where the model needs to catch its own mistake.',
     whyNot: 'Extraction, formatting, classification and rewriting. There you pay several times over for reasoning the task never needed.',
     how: [
-      'Set thinkingBudget to 0 to turn reasoning off.',
-      'thinkingLevel "minimal" is rejected outright by some 3.x models, and a non-zero budget is a hint rather than a cap — asking for 128 still spent 650.',
+      'Set thinkingConfig.thinkingLevel to "minimal" — the documented control, and the one that measured zero reasoning tokens.',
+      'thinkingBudget: 0 also still works but no longer appears in the docs. Check which levels your model accepts: 3.5-flash takes all four, 3.7-flash has no "minimal".',
+    ],
+  },
+
+  'reasoning-effort': {
+    what: 'thinkingLevel is a graded control — minimal, low, medium, high — rather than an on/off switch.',
+    why: 'When a task needs some reasoning but not all of it, and you would rather tune the spend than lose the capability entirely.',
+    whyNot: 'The dial is narrower than it looks. On this model "low" cut reasoning by less than a fifth while "minimal" cut it to nothing, so the useful positions may be just the two ends.',
+    how: [
+      'Set thinkingConfig.thinkingLevel to minimal, low, medium or high.',
+      'Which levels exist varies by model, and an unsupported one is rejected outright rather than rounded — 3.7-flash has no "minimal".',
+      'The older thinkingBudget is a hint, not a cap: asking for 128 measured 650 tokens spent.',
     ],
   },
 

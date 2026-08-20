@@ -64,6 +64,14 @@ export const CARDS = [
     }),
   },
   {
+    id: 'reasoning-effort',
+    demoId: 'effort',
+    title: 'Reasoning Effort',
+    lesson: 'How hard the model thinks is a dial, and the middle of it is narrower than you would expect.',
+    endpoint: gen('effort'),
+    mount: runnerCard('effort', { runLabel: 'Run all three', compact: true, flow: true }),
+  },
+  {
     id: 'caching',
     demoId: 'caching',
     title: 'Prompt Caching',

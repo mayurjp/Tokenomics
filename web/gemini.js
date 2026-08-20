@@ -83,10 +83,13 @@ export function buildRequestBody(demo, variant) {
   if (variant.json) {
     generationConfig.responseMimeType = 'application/json';
   }
-  // thinkingBudget: 0 is the switch that actually turns reasoning off, and it is the
-  // portable one — thinkingLevel 'minimal' is rejected outright by some 3.x models. The
-  // budget is a hint and gets overshot; only 0 is reliably honored.
-  if (variant.thinkingBudget === 0) {
+  // thinkingLevel is the documented control (minimal / low / medium / high), and which
+  // levels exist varies by model — 3.7-flash has no "minimal", 3.5-flash has all four.
+  // thinkingBudget still functions but no longer appears in the docs, and it is a hint
+  // rather than a cap: asking for 128 measured 650.
+  if (variant.thinkingLevel) {
+    generationConfig.thinkingConfig = { thinkingLevel: variant.thinkingLevel };
+  } else if (variant.thinkingBudget === 0) {
     generationConfig.thinkingConfig = { thinkingBudget: 0 };
   }
   if (Object.keys(generationConfig).length > 0) {

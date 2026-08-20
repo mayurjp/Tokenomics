@@ -2,13 +2,11 @@
 
 import { el } from './dom.js';
 import { countTokens } from './api.js';
-import { createMeter } from './meter.js';
 
 // ---- card: what a token is -------------------------------------------------
 export function countAnything(body) {
   const box = el('textarea', { rows: '3', placeholder: 'Type anything.' });
   const readout = el('div', { class: 'readout muted' }, 'Waiting for text…');
-  const meter = createMeter();
 
   let timer = null;
   let seq = 0;
@@ -30,7 +28,6 @@ export function countAnything(body) {
       try {
         const r = await countTokens(text);
         if (mine !== seq) return;
-        meter.add(r);
         readout.className = 'readout';
         readout.replaceChildren(
           el('span', { class: 'big' }, r.tokens.toLocaleString()),
@@ -45,7 +42,7 @@ export function countAnything(body) {
     }, 400);
   });
 
-  body.replaceChildren(box, readout, meter.node);
+  body.replaceChildren(box, readout);
 }
 
 // ---- card: wording changes the price ---------------------------------------
@@ -85,7 +82,6 @@ const PAIRS = [
 
 export function samePriceComparisons(body) {
   const out = el('div', { class: 'pair-out' });
-  const meter = createMeter();
 
   const chips = PAIRS.map((pair) => {
     const chip = el('button', { type: 'button', class: 'chip' }, pair.label);
@@ -97,9 +93,6 @@ export function samePriceComparisons(body) {
 
       try {
         const [a, b] = await Promise.all([countTokens(pair.a.text), countTokens(pair.b.text)]);
-        meter.reset();
-        meter.add(a);
-        meter.add(b);
         const cheaper = a.tokens <= b.tokens ? pair.a.title : pair.b.title;
         const factor = (Math.max(a.tokens, b.tokens) / Math.min(a.tokens, b.tokens)).toFixed(1);
 
@@ -122,8 +115,7 @@ export function samePriceComparisons(body) {
     el('p', { class: 'muted small hint' },
       'Each comparison counts both sides, so it costs two calls. ' +
       'Re-opening one costs nothing — results are kept.'),
-    out,
-    meter.node
+    out
   );
 }
 

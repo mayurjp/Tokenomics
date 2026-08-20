@@ -6,7 +6,6 @@
 
 import { el } from './dom.js';
 import { measure } from './api.js';
-import { createMeter } from './meter.js';
 import { createFlow } from './flow.js';
 import { createMechanism } from './mechanism.js';
 import { MECHANISMS } from './mechanisms.js';
@@ -70,7 +69,11 @@ function promptBlock(variant) {
 
   const length = (variant.systemInstruction ?? '').length + variant.prompt.length;
   if (length <= INLINE_LIMIT) {
-    return el('div', { class: 'sent' }, parts);
+    // A response has an h4 above it; an inline prompt has nothing, so it says what it is.
+    return el('div', { class: 'sent' }, [
+      el('div', { class: 'sent-label' }, 'Sent to the model'),
+      ...parts,
+    ]);
   }
 
   return el('details', { class: 'sent' }, [
@@ -272,7 +275,6 @@ export function runnerCard(demoId, options = {}) {
     }
 
     const out = el('div', { class: 'output' });
-    const meter = createMeter();
     // Opt-in per card. The diagram is being proven on one lesson first; turning it on for
     // another is adding flow to that card's options, nothing more.
     // flow: true renders the diagram with no explainer paragraph; a string supplies one.
@@ -304,8 +306,6 @@ export function runnerCard(demoId, options = {}) {
       // Sequential, never parallel. Two identical prompts in flight at once is exactly the
       // shape that breaks the caching demo, and ordering matters wherever one call is meant
       // to warm something up for the next.
-      // Each run reports its own cost, so the number stays next to the thing that caused it.
-      meter.reset();
       const outcomes = [];
       for (const variant of demo.variants) {
         try {
@@ -314,7 +314,6 @@ export function runnerCard(demoId, options = {}) {
           const startedAt = performance.now();
           const result = await measure(demo.id, variant.id);
           const durationMs = result.durationMs ?? Math.round(performance.now() - startedAt);
-          meter.add(result);
           outcomes.push({ result: { ...result, durationMs } });
         } catch (err) {
           // One unreachable model tier must not sink the whole comparison.
@@ -368,7 +367,6 @@ export function runnerCard(demoId, options = {}) {
         flow?.node,
         mech?.node,
         out,
-        meter.node,
       ].filter(Boolean)
     );
   };

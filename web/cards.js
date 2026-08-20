@@ -27,7 +27,6 @@ const gen = (demoId) => (ctx) => ctx.demos?.[demoId]?.variants?.[0]?.endpoint ??
 export const CARDS = [
   {
     id: 'count-anything',
-    hue: '#0891b2',
     title: 'Tokenizer',
     lesson: 'Count any text. Tokens are not words, and not characters.',
     endpoint: count,
@@ -35,7 +34,6 @@ export const CARDS = [
   },
   {
     id: 'same-meaning',
-    hue: '#0d9488',
     title: 'Phrasing Cost',
     lesson: 'The same meaning can cost several times more, depending on how it is written.',
     endpoint: count,
@@ -44,7 +42,6 @@ export const CARDS = [
   {
     id: 'measure-call',
     demoId: 'single-call',
-    hue: '#2563eb',
     title: 'Baseline Call',
     lesson: 'One real call, reporting exactly what it spent.',
     endpoint: gen('single-call'),
@@ -54,7 +51,6 @@ export const CARDS = [
   {
     id: 'thinking-cost',
     demoId: 'thinking',
-    hue: '#7c3aed',
     title: 'Thinking Tokens',
     lesson: 'Newer models reason before answering, and you pay for reasoning you never see.',
     endpoint: gen('thinking'),
@@ -70,7 +66,6 @@ export const CARDS = [
   {
     id: 'caching',
     demoId: 'caching',
-    hue: '#4f46e5',
     title: 'Prompt Caching',
     lesson: 'Send the same long prompt twice and the second call reads part of it from cache.',
     endpoint: gen('caching'),
@@ -80,7 +75,6 @@ export const CARDS = [
   {
     id: 'model-routing',
     demoId: 'routing',
-    hue: '#059669',
     title: 'Model Routing',
     lesson: 'The same prompt costs different amounts on different model tiers.',
     endpoint: gen('routing'),
@@ -93,7 +87,6 @@ export const CARDS = [
   {
     id: 'lean-prompt',
     demoId: 'system-prompt',
-    hue: '#d97706',
     title: 'System Prompt Bloat',
     lesson: 'A bloated system prompt is paid for on every single request, forever.',
     endpoint: gen('system-prompt'),
@@ -106,7 +99,6 @@ export const CARDS = [
   {
     id: 'output-cap',
     demoId: 'output-cap',
-    hue: '#ea580c',
     title: 'Output Capping',
     lesson: 'Output is the expensive half, and its length is controllable.',
     endpoint: gen('output-cap'),
@@ -119,7 +111,6 @@ export const CARDS = [
   {
     id: 'structured-output',
     demoId: 'structured',
-    hue: '#c026d3',
     title: 'Structured Output',
     lesson: 'Asking for JSON usually costs fewer output tokens than asking for sentences.',
     endpoint: gen('structured'),
@@ -132,7 +123,6 @@ export const CARDS = [
   {
     id: 'rag-vs-stuffing',
     demoId: 'rag',
-    hue: '#e11d48',
     title: 'Retrieval vs Stuffing',
     lesson: 'Sending only the relevant passage beats sending the whole document.',
     endpoint: gen('rag'),
@@ -145,7 +135,6 @@ export const CARDS = [
   {
     id: 'context-compression',
     demoId: 'compression',
-    hue: '#0284c7',
     title: 'Context Compression',
     lesson: 'A long conversation can be summarized instead of replayed verbatim.',
     endpoint: gen('compression'),
@@ -157,7 +146,6 @@ export const CARDS = [
   },
   {
     id: 'batch-api',
-    hue: '#65a30d',
     title: 'Batch API',
     lesson: 'Work nobody is waiting for is billed at half price — if you can wait for it.',
     endpoint: () => 'POST /v1beta/models/gemini-3.5-flash:batchGenerateContent',
@@ -165,7 +153,6 @@ export const CARDS = [
   },
   {
     id: 'semantic-caching',
-    hue: '#9333ea',
     title: 'Semantic Caching',
     lesson: 'A reworded question can reuse a previous answer and skip the model entirely.',
     endpoint: () => 'POST /v1beta/models/gemini-embedding-001:embedContent',
@@ -173,7 +160,6 @@ export const CARDS = [
   },
   {
     id: 'finops',
-    hue: '#b45309',
     title: 'FinOps',
     lesson: 'Attribution and unit economics, built on these numbers.',
     endpoint: () => 'POST /v1beta/models/gemini-3.5-flash:generateContent',
@@ -206,10 +192,9 @@ export function renderCard(card, ctx) {
     // Each lesson carries its own hue, so the grid is scannable by colour and a card keeps
     // its identity when it becomes the whole page. Everything colourful downstream reads
     // this one variable.
-    // The raw hue goes on the element; --card is derived from it in CSS, which is what
-    // lets dark mode lighten every card with one rule instead of fourteen. An inline
-    // --card would outrank that rule.
-    style: `--card-raw: ${card.hue}`,
+    // A tone per kind of call, not per card. Fourteen distinct hues looked like decoration;
+    // three that mean "counts tokens", "runs the model" and "calls nothing" are information.
+    'data-kind': endpoint ? (endpoint.includes('countTokens') ? 'count' : 'generate') : 'none',
   }, [
     head,
     // Collapsed tiles are too narrow for the full path, and a truncated URL teaches

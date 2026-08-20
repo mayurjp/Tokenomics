@@ -45,6 +45,9 @@ function route() {
 
   grid.classList.toggle('detail', Boolean(id));
   back.hidden = !id;
+  // The footer is a page-level statement, and the settings panel makes the same point where
+  // it actually matters. Under a card it reads as a warning attached to that lesson.
+  document.querySelector('main > footer').hidden = Boolean(id);
 
   for (const node of grid.children) {
     const isActive = node.id === `card-${id}`;

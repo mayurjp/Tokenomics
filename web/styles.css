@@ -1,50 +1,55 @@
 :root {
+  /* Neutral, slightly cool greys and a single accent. Colour is reserved for things that
+     mean something — the direction a token travelled, an error, the kind of call a card
+     makes. Everything else is type and space. */
   --bg: #ffffff;
-  --fg: #17171c;
-  --muted: #61667a;
-  --line: #e6e6ef;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --line: #e4e8ee;
   --panel: #ffffff;
-  --accent: #5b3df5;
-  --error: #d92d3c;
+  --page: #f5f7fa;
+  --accent: #1d4ed8;
+  --error: #b42318;
 
-  /* The page sits on a soft wash rather than flat white, so the cards read as cards. */
-  --page: radial-gradient(1100px 620px at 12% -8%, #ede9ff 0%, transparent 60%),
-          radial-gradient(900px 520px at 88% 0%, #dff5f4 0%, transparent 55%),
-          #f7f7fb;
-  --card-shadow: 0 1px 2px rgba(20, 20, 45, .05), 0 8px 22px -12px rgba(20, 20, 45, .18);
-  --card-shadow-hover: 0 2px 4px rgba(20, 20, 45, .07), 0 18px 40px -16px rgba(20, 20, 45, .28);
-  /* Fallback for anything rendered outside a card, which owns no hue of its own. */
+  --card-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 1px 1px rgba(15, 23, 42, .03);
+  --card-shadow-hover: 0 1px 2px rgba(15, 23, 42, .05), 0 6px 16px -8px rgba(15, 23, 42, .18);
+
+  /* Kind of call. Muted on purpose: it labels, it does not decorate. */
+  --kind-count: #0f766e;
+  --kind-generate: #1d4ed8;
+  --kind-none: #64748b;
   --card: var(--accent);
 
-  /* Diagram fills. Deliberately soft — the bar should read as a quiet illustration, not a
-     chart competing with the numbers beside it. Thinking carries the accent because it is
-     the part of the lesson people do not expect. */
-  --flow-input: #8f98b4;
-  --flow-cache: #dde3f5;
-  --flow-think: #6d4df0;
-  --flow-output: #12a594;
+  /* Data colours for the diagrams. These are the one place saturation earns its keep,
+     because the reader has to tell four token classes apart at a glance. */
+  --flow-input: #94a3b8;
+  --flow-cache: #cbd5e1;
+  --flow-think: #4f46e5;
+  --flow-output: #0f766e;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14161d;
-    --fg: #e9eaf2;
-    --muted: #9ba1b5;
-    --line: #2a2e3c;
-    --panel: #191c25;
-    --accent: #a48bff;
-    --error: #ff8a94;
+    --bg: #12151c;
+    --fg: #e6e9ef;
+    --muted: #8d96a8;
+    --line: #242a35;
+    --panel: #171b23;
+    --page: #0e1116;
+    --accent: #7d9cff;
+    --error: #f5766a;
 
-    --page: radial-gradient(1100px 620px at 12% -8%, #201b3d 0%, transparent 60%),
-            radial-gradient(900px 520px at 88% 0%, #102b30 0%, transparent 55%),
-            #0d0f15;
-    --card-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 26px -14px rgba(0, 0, 0, .7);
-    --card-shadow-hover: 0 2px 6px rgba(0, 0, 0, .45), 0 20px 44px -18px rgba(0, 0, 0, .85);
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --card-shadow-hover: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 20px -10px rgba(0, 0, 0, .6);
 
-    --flow-input: #4b5268;
-    --flow-cache: #343a52;
-    --flow-think: #9b7dff;
-    --flow-output: #2fb8a4;
+    --kind-count: #4db6a5;
+    --kind-generate: #7d9cff;
+    --kind-none: #8d96a8;
+
+    --flow-input: #55607a;
+    --flow-cache: #39425a;
+    --flow-think: #8b8bf5;
+    --flow-output: #3fa392;
   }
 }
 
@@ -53,14 +58,13 @@
 body {
   margin: 0;
   background: var(--page);
-  background-attachment: fixed;
   color: var(--fg);
   font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 main { max-width: 66rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
 
-h1 { font-size: 1.6rem; margin: 0; }
+h1 { margin: 0; }
 
 /* Scoped to the page header — .card-head is a <header> too, and a bare rule here leaks
    a margin into every tile. */
@@ -141,6 +145,10 @@ h4 { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color:
    the name, the endpoint and one line, and that is the whole job. */
 .card .explain { display: none; }
 .card.open .explain { display: block; }
+
+/* The tile needs a one-line summary; the detail view has What, which says the same thing
+   at more length. Showing both put the card's opening line twice on the same screen. */
+.card.open .lesson { display: none; }
 
 .card-head {
   display: flex; align-items: baseline; justify-content: space-between; gap: .75rem;
@@ -227,6 +235,7 @@ button:disabled { opacity: .55; cursor: default; }
 }
 
 footer { margin-top: 2.5rem; font-size: .875rem; }
+footer[hidden] { display: none; }
 
 .demo-banner {
   padding: .7rem 1rem; margin-bottom: 1.25rem;
@@ -288,8 +297,6 @@ details.sent > summary { cursor: pointer; font-size: .8rem; color: var(--muted);
 button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; }
 button.ghost:hover { color: var(--fg); border-color: var(--accent); }
 
-.meter { margin: 1.25rem 0 0; padding-top: .75rem; border-top: 1px solid var(--line); }
-.meter[hidden] { display: none; }
 
 .cost { margin: .6rem 0 0; font-variant-numeric: tabular-nums; }
 .cost strong { font-size: 1.05rem; }
@@ -399,69 +406,38 @@ button.ghost:hover { color: var(--fg); border-color: var(--accent); }
 #cards.detail .card.open .lesson { font-size: 1rem; max-width: 46rem; }
 
 /* ============================================================================
-   Colour system
-   Each card carries --card, its own hue. Chrome is coloured; body text is not —
-   the numbers have to stay the most legible thing on the page.
+   Colour, used sparingly
    ========================================================================= */
 
-/* --card is the vivid hue, for bars, borders and fills where contrast rules do not apply.
-   --card-ink is the same hue darkened enough to be legible as small text on white: seven
-   of the fourteen fell below 4.5:1 at 11.5px when text used the raw hue. */
-.card {
-  --card: var(--card-raw, var(--accent));
-  --card-ink: color-mix(in srgb, var(--card-raw, var(--accent)) 62%, black);
-}
+.card[data-kind="count"]    { --card: var(--kind-count); }
+.card[data-kind="generate"] { --card: var(--kind-generate); }
+.card[data-kind="none"]     { --card: var(--kind-none); }
+.card { --card-ink: var(--card); }
 
-/* Dark mode lifts the hues off the background instead, and text needs no darkening there. */
-@media (prefers-color-scheme: dark) {
-  .card {
-    --card: color-mix(in srgb, var(--card-raw, var(--accent)) 58%, white);
-    --card-ink: color-mix(in srgb, var(--card-raw, var(--accent)) 52%, white);
-  }
-}
-
-h1 {
-  background: linear-gradient(96deg, #5b3df5 0%, #0d9488 55%, #c026d3 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-@media (prefers-color-scheme: dark) {
-  h1 { background: linear-gradient(96deg, #a48bff 0%, #2fb8a4 55%, #ef7bff 100%); -webkit-background-clip: text; background-clip: text; }
-}
+h1 { font-size: 1.5rem; letter-spacing: -.01em; color: var(--fg); }
 
 /* ---- cards in the grid ---- */
 .card {
   background: var(--panel);
   box-shadow: var(--card-shadow);
-  border-radius: 14px;
-  border-color: transparent;
-  position: relative;
-  overflow: hidden;
-  transition: box-shadow .16s ease, transform .16s ease;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: box-shadow .14s ease, border-color .14s ease;
 }
-/* The hue as a bar across the top: colourful at a glance, no cost to legibility. */
-.card::before {
-  content: '';
-  position: absolute; inset: 0 0 auto 0; height: 4px;
-  background: linear-gradient(90deg, var(--card), color-mix(in srgb, var(--card) 45%, transparent));
-}
-.card:hover { border-color: transparent; box-shadow: var(--card-shadow-hover); transform: translateY(-2px); }
-.card.open:hover { transform: none; }
+.card:hover { border-color: color-mix(in srgb, var(--fg) 18%, transparent); box-shadow: var(--card-shadow-hover); }
 
 .card h2 { color: var(--fg); }
-.card:hover h2 { color: var(--card-ink); }
-.chevron { color: var(--card); }
+.chevron { color: var(--muted); }
 
-/* Endpoint badge picks up the card's hue. */
+/* The endpoint badge is where the kind of call is stated, so it is the one thing on a
+   tile that carries a tone. */
 .card .endpoint {
   color: var(--card-ink);
-  border-color: color-mix(in srgb, var(--card) 28%, transparent);
-  background: color-mix(in srgb, var(--card) 8%, transparent);
+  border-color: color-mix(in srgb, var(--card) 24%, transparent);
+  background: color-mix(in srgb, var(--card) 6%, transparent);
 }
 
-/* Reference cards keep the dashed treatment but gain their hue too. */
-.card.reference { background: color-mix(in srgb, var(--panel) 92%, transparent); }
+.card.reference { background: var(--panel); }
 
 /* ---- detail view ---- */
 #cards.detail .card.open { box-shadow: none; overflow: visible; }
@@ -490,7 +466,7 @@ button.ghost, .mech-toggle, .backbar-button, .chip { background: var(--bg); box-
 
 /* Panels sit on white inside a card, so they need their own surface now the page is tinted. */
 .keypanel, .session { background: var(--panel); box-shadow: var(--card-shadow); border-color: transparent; border-radius: 12px; }
-pre, textarea, .flow-chip { background: color-mix(in srgb, var(--fg) 3%, var(--bg)); }
+textarea, .flow-chip { background: color-mix(in srgb, var(--fg) 3%, var(--bg)); }
 
 .prompts-grid { margin-bottom: 1.2rem; }
 .prompts-grid .sent { margin-bottom: 0; }
@@ -526,4 +502,35 @@ pre, textarea, .flow-chip { background: color-mix(in srgb, var(--fg) 3%, var(--b
 @media (max-width: 40rem) {
   .explain dl { grid-template-columns: 1fr; gap: .15rem; }
   .explain dd { margin-bottom: .6rem; }
+}
+
+/* ---- model-facing text ----
+   What you sent and what came back are quoted material, not page copy, and an earlier
+   3%-of-foreground tint was too faint to say so. They now sit on a distinctly tinted
+   surface behind a coloured rule, using the same two tones the diagrams use for input and
+   output — so the boxes and the bars agree about which direction a thing travelled. */
+pre {
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg));
+  border-color: color-mix(in srgb, var(--fg) 9%, transparent);
+}
+
+pre.prompt,
+pre.response {
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-radius: 4px 8px 8px 4px;
+}
+pre.prompt {
+  border-left-color: var(--flow-input);
+  background: color-mix(in srgb, var(--flow-input) 12%, var(--bg));
+}
+pre.response {
+  border-left-color: var(--flow-output);
+  background: color-mix(in srgb, var(--flow-output) 9%, var(--bg));
+}
+
+/* A label for the inline prompt, which has no heading above it the way a response does. */
+.sent-label {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--muted); margin-bottom: .3rem;
 }

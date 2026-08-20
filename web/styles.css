@@ -505,3 +505,8 @@ pre.response {
 .mech.revealed .mech-lane.is-hidden { opacity: 1; }
 .mech-dotted { stroke-dasharray: 3 4; }
 .mech-stop line { stroke: var(--error); stroke-width: 2; stroke-linecap: round; }
+
+/* ---- brand ---- */
+.brand { display: inline-flex; align-items: center; gap: .65rem; text-decoration: none; color: inherit; }
+.brand-mark { display: block; border-radius: 7px; }
+.brand h1 { font-size: 1.4rem; }

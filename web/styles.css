@@ -567,8 +567,8 @@ pre.response {
 .mech-head { fill: var(--flow-output); }
 .mech-bracket { fill: none; stroke: var(--muted); stroke-width: 1.5; }
 
-/* The reasoning branch: dotted because it is generated, stopped because it never arrives. */
-.mech-think { opacity: 0; transition: opacity .18s ease; }
-.mech.revealed .mech-think { opacity: 1; }
+/* The lane that answers the hook stays hidden until the toggle. */
+.mech-lane.is-hidden { opacity: 0; transition: opacity .18s ease; }
+.mech.revealed .mech-lane.is-hidden { opacity: 1; }
 .mech-dotted { stroke-dasharray: 3 4; }
 .mech-stop line { stroke: var(--error); stroke-width: 2; stroke-linecap: round; }

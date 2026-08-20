@@ -32,7 +32,7 @@ function thinking(runs) {
     process: `the model · ${run.model}`,
     in: [{ label: 'your prompt', tokens: s.input_tokens, fate: 'billed' }],
     out: [
-      { label: 'thinks', tokens: s.reasoning_tokens, fate: 'dropped', outcome: 'never returned' },
+      { label: 'thinks', tokens: s.reasoning_tokens, fate: 'dropped', outcome: 'never returned', reveal: true },
       { label: 'answers', tokens: s.output_tokens, fate: 'delivered', outcome: 'you read this' },
     ],
     ...billing(run),
@@ -58,7 +58,7 @@ function caching(runs) {
     reveal: 'Where did the discount come from?',
     process: `the model · ${second.model}`,
     in: [
-      { label: 'read from cache', tokens: cached, fate: 'discounted', note: 'a tenth of the input rate' },
+      { label: 'read from cache', tokens: cached, fate: 'discounted', note: 'a tenth of the input rate', reveal: true },
       { label: 'charged in full', tokens: fresh, fate: 'billed' },
     ],
     out: [{ label: 'answers', tokens: s.output_tokens, fate: 'delivered', outcome: 'you read this' }],
@@ -88,7 +88,7 @@ function rag(runs) {
     in: [{ label: 'the whole document', tokens: whole, fate: 'billed', note: 'indexed once' }],
     out: [
       { label: 'the passage that answers it', tokens: sent, fate: 'delivered', outcome: 'sent to the model' },
-      { label: 'everything else', tokens: held, fate: 'skipped', outcome: 'never sent' },
+      { label: 'everything else', tokens: held, fate: 'skipped', outcome: 'never sent', reveal: true },
     ],
     billed: `billed for ${n(retrieved.stats.total_tokens)} tokens, not ${n(stuffed.stats.total_tokens)}`,
     cost: `${usd(atVolume(costOf(retrieved.stats, retrieved.model)))} / ${RUNS_PER_MONTH.toLocaleString()} runs`,
@@ -111,7 +111,7 @@ function systemPrompt(runs) {
     reveal: 'What is actually in the input?',
     process: `the model · ${bloated.model}`,
     in: [
-      { label: 'system prompt', tokens: overhead, fate: 'billed', note: 'sent again every call' },
+      { label: 'system prompt', tokens: overhead, fate: 'billed', note: 'sent again every call', reveal: true },
       { label: 'the actual question', tokens: lean.stats.input_tokens, fate: 'billed' },
     ],
     out: [{ label: 'answers', tokens: bloated.stats.output_tokens, fate: 'delivered', outcome: 'you read this' }],
@@ -137,7 +137,7 @@ function outputCap(runs) {
     in: [{ label: 'your prompt', tokens: capped.stats.input_tokens, fate: 'billed' }],
     out: [
       { label: 'written, up to the cap', tokens: capped.stats.output_tokens, fate: 'delivered', outcome: 'you read this' },
-      { label: 'never generated', tokens: saved, fate: 'skipped', outcome: 'never written', note: 'the difference between the two runs' },
+      { label: 'never generated', tokens: saved, fate: 'skipped', outcome: 'never written', note: 'the difference between the two runs', reveal: true },
     ],
     ...billing(capped),
     summary: `With a cap the model wrote ${n(capped.stats.output_tokens)} output tokens instead of ` +
@@ -160,7 +160,7 @@ function structured(runs) {
     in: [{ label: 'the same extraction task', tokens: json.stats.input_tokens, fate: 'billed' }],
     out: [
       { label: 'the data itself', tokens: json.stats.output_tokens, fate: 'delivered', outcome: 'you read this' },
-      { label: 'sentences around it', tokens: packaging, fate: 'dropped', outcome: 'no extra data', note: 'the difference between the two runs' },
+      { label: 'sentences around it', tokens: packaging, fate: 'dropped', outcome: 'no extra data', note: 'the difference between the two runs', reveal: true },
     ],
     ...billing(json),
     summary: `Prose spent ${n(prose.stats.output_tokens)} output tokens on the same five fields ` +
@@ -183,7 +183,7 @@ function compression(runs) {
     in: [{ label: 'the conversation so far', tokens: verbatim.stats.input_tokens, fate: 'billed', note: 'resent on every turn' }],
     out: [
       { label: 'the summary', tokens: summarized.stats.input_tokens, fate: 'delivered', outcome: 'sent to the model' },
-      { label: 'the turns it replaces', tokens: dropped, fate: 'skipped', outcome: 'never sent again', note: 'lossy by definition' },
+      { label: 'the turns it replaces', tokens: dropped, fate: 'skipped', outcome: 'never sent again', note: 'lossy by definition', reveal: true },
     ],
     ...billing(summarized),
     summary: `A ${n(verbatim.stats.input_tokens)} token history becomes a ${n(summarized.stats.input_tokens)} ` +

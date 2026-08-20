@@ -40,6 +40,12 @@ const FATE = {
   skipped:   { line: 'mech-line mech-dashed', stop: true, tone: 'muted' },  // never sent at all
 };
 
+// A lane marked reveal: true is the answer to the hook, and stays hidden until the toggle.
+// The old bespoke renderer hard-coded this as .mech-think; the generic one emits
+// .mech-lane.tone-think, so that selector matched nothing and the toggle animated air.
+const laneClass = (lane, f) =>
+  `mech-lane tone-${f.tone}${lane.reveal ? ' is-hidden' : ''}`;
+
 // Geometry. Wide enough that the right-hand outcome text has somewhere to live: an earlier
 // pass clipped "sent to the model" at the viewBox edge and stacked the left-hand label on
 // top of its own note.
@@ -52,7 +58,7 @@ const STOP_END = BOX_R + 46; // where a terminated one does
 
 function inLane(lane, y) {
   const f = FATE[lane.fate] ?? FATE.billed;
-  return svgEl('g', { class: `mech-lane tone-${f.tone}` }, [
+  return svgEl('g', { class: laneClass(lane, f) }, [
     text(0, y - 5, lane.label, 'mech-label'),
     text(0, y + 14, `${lane.tokens.toLocaleString()} tokens`, 'mech-num'),
     // 16px apart put the note's ascenders into the count's descenders. Text bounding boxes
@@ -70,7 +76,7 @@ function outLane(lane, y) {
   const endX = f.stop ? STOP_END : OUT_END;
   const labelX = f.stop ? endX + 26 : OUT_END + 14;
 
-  return svgEl('g', { class: `mech-lane tone-${f.tone}` }, [
+  return svgEl('g', { class: laneClass(lane, f) }, [
     text(BOX_X + 14, y - 5, lane.label, 'mech-label'),
     svgEl('line', {
       x1: BOX_X + 14, y1: y + 8, x2: endX, y2: y + 8,

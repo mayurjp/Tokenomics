@@ -431,3 +431,29 @@ details.apiswitch > summary { cursor: pointer; font-size: .82rem; color: var(--m
 .switch-default { margin: .35rem 0 0; }
 details.apiswitch code { font-size: .82em; padding: .05rem .25rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
 details.apiswitch > p { margin-top: .9rem; max-width: 44rem; }
+
+/* ---- one card at a time ---- */
+#backbar { margin-bottom: 1rem; }
+#backbar[hidden] { display: none; }
+.backbar-button {
+  padding: .4rem .9rem; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--bg); color: var(--fg); font-size: .875rem; font-weight: 500;
+}
+.backbar-button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Detail view: the grid stops being a grid and the chosen card is the page. */
+#cards.detail { display: block; }
+#cards.detail .card { display: none; }
+#cards.detail .card.open {
+  display: block; border: 0; background: transparent; padding: 0; cursor: default;
+}
+#cards.detail .card.open:hover { border-color: transparent; }
+#cards.detail .card.open .card-head { cursor: default; }
+#cards.detail .card.open .chevron { display: none; }
+#cards.detail .card.open h2 { font-size: 1.45rem; }
+/* The router focuses this heading so a screen reader lands in the lesson rather than at
+   the top of the document. It is a route landmark, not a control, so it takes no ring —
+   otherwise every navigation draws a box around the title for mouse users. */
+#cards.detail .card.open h2:focus,
+#cards.detail .card.open h2:focus-visible { outline: none; }
+#cards.detail .card.open .lesson { font-size: 1rem; max-width: 46rem; }

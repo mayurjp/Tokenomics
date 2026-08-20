@@ -179,7 +179,9 @@ export function renderCard(card, ctx) {
     'aria-expanded': 'false',
     'aria-controls': `body-${card.id}`,
   }, [
-    el('h2', {}, card.title),
+    // tabindex -1 so the router can move focus here on navigation; an h2 is not focusable
+    // otherwise, and a keyboard user would be left at the top of the document.
+    el('h2', { tabindex: '-1' }, card.title),
     el('span', { class: 'chevron', 'aria-hidden': 'true' }, '▸'),
   ]);
 
@@ -197,23 +199,25 @@ export function renderCard(card, ctx) {
     body,
   ]);
 
-  const toggle = () => {
-    const open = node.classList.toggle('open');
-    head.setAttribute('aria-expanded', String(open));
+  // Opening a card is a navigation, not a toggle. The hash gives each lesson a URL, so it
+  // can be linked to and the browser's own back button works — the router in app.js decides
+  // which card is open, and nothing here mutates that directly.
+  const open = () => {
+    if (node.classList.contains('open')) return;
+    location.hash = card.id;
   };
 
-  // A collapsed card is clickable anywhere, so the whole tile is the target. Once open,
-  // only the header closes it — otherwise typing in a textarea or hitting Run would
-  // collapse the thing you are trying to use.
   node.addEventListener('click', (event) => {
-    if (node.classList.contains('open') && !event.target.closest('.card-head')) return;
-    toggle();
+    // Inside an open card, clicks belong to whatever they landed on.
+    if (node.classList.contains('open')) return;
+    if (event.target.closest('a')) return;
+    open();
   });
 
   head.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      toggle();
+      open();
     }
   });
 

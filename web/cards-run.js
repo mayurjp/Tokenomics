@@ -8,6 +8,7 @@ import { el } from './dom.js';
 import { measure } from './api.js';
 import { createMeter } from './meter.js';
 import { createFlow } from './flow.js';
+import { createTradeoff } from './tradeoff.js';
 import { costOf, atVolume, usd, isPriced, RUNS_PER_MONTH, PRICING_DATE } from './pricing.js';
 
 const METRIC_LABEL = {
@@ -191,6 +192,7 @@ export function runnerCard(demoId, options = {}) {
     // Opt-in per card. The diagram is being proven on one lesson first; turning it on for
     // another is adding flow to that card's options, nothing more.
     const flow = options.flow ? createFlow(options.flow) : null;
+    const trade = options.tradeoffs ? createTradeoff(options.tradeoffs) : null;
     const button = el('button', { type: 'button' }, options.runLabel ?? 'Run');
 
     // Columns exist from the start, holding the prompts. Running fills in the numbers
@@ -215,23 +217,29 @@ export function runnerCard(demoId, options = {}) {
       const outcomes = [];
       for (const variant of demo.variants) {
         try {
+          // Wall clock, not a claim. Thinking costs time as well as money, and the wait is
+          // the half of the trade-off that token counts cannot show.
+          const startedAt = performance.now();
           const result = await measure(demo.id, variant.id);
+          const durationMs = result.durationMs ?? Math.round(performance.now() - startedAt);
           meter.add(result);
-          outcomes.push({ result });
+          outcomes.push({ result: { ...result, durationMs } });
         } catch (err) {
           // One unreachable model tier must not sink the whole comparison.
           outcomes.push({ error: err.message });
         }
       }
 
+      const runs = demo.variants.map((v, i) => ({
+        variant: v.label,
+        model: outcomes[i].result?.model ?? v.model,
+        stats: outcomes[i].result?.stats ?? null,
+        durationMs: outcomes[i].result?.durationMs ?? null,
+      }));
+
+      if (trade) trade.update(runs);
       if (flow) {
-        flow.update(
-          demo.variants.map((v, i) => ({
-            variant: v.label,
-            model: outcomes[i].result?.model ?? v.model,
-            stats: outcomes[i].result?.stats ?? null,
-          }))
-        );
+        flow.update(runs);
       }
 
       const line = summary(demo, outcomes);
@@ -256,7 +264,7 @@ export function runnerCard(demoId, options = {}) {
     out.replaceChildren(columns(null));
 
     body.replaceChildren(
-      ...[flow?.node, el('div', { class: 'controls' }, [button]), out, meter.node]
+      ...[flow?.node, el('div', { class: 'controls' }, [button]), out, trade?.node, meter.node]
         .filter(Boolean)
     );
   };

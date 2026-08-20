@@ -282,6 +282,10 @@ export async function demoMeasure(demoId, variantId) {
     variantId,
     model: spec.model ?? MODEL,
     endpoint: gen(spec.model),
+    // Fabricated like the token counts, and for the same reason: the demo sleep is
+    // compressed so the page stays usable, but the number shown should reflect what a real
+    // call of this shape takes. Roughly 55ms per generated token, plus a fixed overhead.
+    durationMs: Math.round(900 + ((spec.output ?? 0) + (spec.thinking ?? 0)) * 5.5),
     response_text: spec.text,
     truncated: spec.truncated === true,
     stats: {

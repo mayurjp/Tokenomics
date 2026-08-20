@@ -55,6 +55,28 @@ export const CARDS = [
     endpoint: gen('thinking'),
     mount: runnerCard('thinking', {
       runLabel: 'Run both',
+      // Judgement, not measurement — this page measures cost, not correctness, and the
+      // panel tags these as such rather than passing them off as findings from the run.
+      tradeoffs: {
+        'thinking on': {
+          gain: [
+            'Holds up better on multi-step problems: arithmetic, planning, ambiguous or self-contradictory instructions',
+            'Can catch and correct its own mistakes before answering',
+          ],
+          lose: [
+            'You cannot inspect the reasoning you paid for, so a wrong answer is harder to debug',
+          ],
+        },
+        'thinking off': {
+          gain: [
+            'Predictable cost and latency — no hidden variable-length step before the answer',
+            'Loses almost nothing on extraction, formatting, classification and rewriting',
+          ],
+          lose: [
+            'Degrades on genuinely hard reasoning, where it will answer confidently and wrongly rather than working it out',
+          ],
+        },
+      },
       flow:
         'A model does not just read your prompt and answer it. Newer ones write out their ' +
         'reasoning first — and that reasoning is generated text, so it is billed like any ' +

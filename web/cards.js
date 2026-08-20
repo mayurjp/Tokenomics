@@ -197,11 +197,11 @@ export function renderCard(card, ctx) {
     'data-kind': endpoint ? (endpoint.includes('countTokens') ? 'count' : 'generate') : 'none',
   }, [
     head,
-    // Collapsed tiles are too narrow for the full path, and a truncated URL teaches
-    // nothing — so the method name shows in the grid and the full path on expand.
+    // Shown only in the detail view. On a tile the bare method name was jargon competing
+    // with the title; alongside the lesson it is the precise answer to "what would I call?"
     el('code', { class: 'endpoint' }, [
-      el('span', { class: 'ep-short' }, endpoint ? endpoint.split(':').pop() : 'no API call'),
-      el('span', { class: 'ep-full' }, endpoint ?? 'no API call'),
+      el('span', { class: 'ep-tag' }, 'API'),
+      el('span', {}, endpoint ?? 'no call — reference only'),
     ]),
     el('p', { class: 'lesson muted' }, card.lesson),
     // What / why / why not / how, in that order on every card. Looked up by card id rather

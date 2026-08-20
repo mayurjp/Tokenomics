@@ -54,8 +54,10 @@ function inLane(lane, y) {
   const f = FATE[lane.fate] ?? FATE.billed;
   return svgEl('g', { class: `mech-lane tone-${f.tone}` }, [
     text(0, y - 5, lane.label, 'mech-label'),
-    text(0, y + 13, `${lane.tokens.toLocaleString()} tokens`, 'mech-num'),
-    lane.note ? text(0, y + 29, lane.note, 'mech-muted') : null,
+    text(0, y + 14, `${lane.tokens.toLocaleString()} tokens`, 'mech-num'),
+    // 16px apart put the note's ascenders into the count's descenders. Text bounding boxes
+    // are taller than the font size, so line spacing has to allow for both.
+    lane.note ? text(0, y + 34, lane.note, 'mech-muted') : null,
     svgEl('line', {
       x1: 168, y1: y, x2: BOX_X - 8, y2: y,
       class: f.line, 'marker-end': 'url(#mech-arrow)',
@@ -89,11 +91,11 @@ function outLane(lane, y) {
 function diagram(spec) {
   const ins = spec.in ?? [];
   const outs = spec.out ?? [];
-  const gap = 58;
+  const gap = 66;
   const rows = Math.max(ins.length, outs.length);
   const boxTop = 26;
   const boxH = Math.max(104, rows * gap + 30);
-  const height = boxTop + boxH + 66;
+  const height = boxTop + boxH + 88;
   const firstY = boxTop + 54;
 
   return svgEl('svg', {
@@ -119,8 +121,10 @@ function diagram(spec) {
       d: `M ${BOX_X} ${boxTop + boxH + 12} L ${BOX_X} ${boxTop + boxH + 20} L ${BOX_R} ${boxTop + boxH + 20} L ${BOX_R} ${boxTop + boxH + 12}`,
       class: 'mech-bracket',
     }),
+    // Stacked, not side by side: a billed line can run long — "2,507 tokens, 2,304 of them
+    // at a tenth of the input rate" — and it collided with the cost sitting beside it.
     text(BOX_X + 2, boxTop + boxH + 44, spec.billed, 'mech-bill'),
-    spec.cost ? text(BOX_R + 18, boxTop + boxH + 44, spec.cost, 'mech-muted') : null,
+    spec.cost ? text(BOX_X + 2, boxTop + boxH + 66, spec.cost, 'mech-muted') : null,
   ]);
 }
 

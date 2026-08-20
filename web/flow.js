@@ -98,7 +98,7 @@ function barRow(label, stats, scaleMax, model, durationMs) {
       el('span', { class: 'muted' }, cached > 0 ? ' tokens' : ' billed'),
       cached > 0
         ? el('span', { class: 'muted small block' },
-            `${cached.toLocaleString()} of them at a tenth of the rate`)
+            `${cached.toLocaleString()} at a tenth of the rate`)
         : null,
       el('span', { class: 'muted small block' },
         [durationMs ? secs(durationMs) : null, `${usd(atVolume(costOf(stats, model)))}/mo`]

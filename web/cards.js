@@ -49,38 +49,33 @@ export const CARDS = [
   {
     id: 'thinking-cost',
     title: 'Thinking Tokens',
-    lesson: 'Newer models reason before answering, and that reasoning is charged as output.',
-    tradeoff:
-      'Reasoning earns its cost on genuinely hard problems. Turning it off is close to free on extraction, formatting and classification, and expensive in accuracy on multi-step logic.',
+    lesson: 'Newer models reason before answering, and you pay for reasoning you never see.',
     endpoint: gen('thinking'),
+    hasTradeoffPanel: true,
     mount: runnerCard('thinking', {
       runLabel: 'Run both',
-      // Judgement, not measurement — this page measures cost, not correctness, and the
-      // panel tags these as such rather than passing them off as findings from the run.
+      compact: true,
+      // The diagram stays; its explainer paragraph does not, since it restated `lesson`.
+      flow: true,
+      predict: {
+        question: 'Before you run it — how much of the bill do you think is reasoning you never see?',
+        choices: [10, 40, 75],
+      },
+      // Judgement, not measurement. The panel tags these so they cannot be mistaken for
+      // findings from the run. Three a side; the rest was padding.
       tradeoffs: {
         'thinking on': {
           gain: [
-            'Holds up better on multi-step problems: arithmetic, planning, ambiguous or self-contradictory instructions',
-            'Can catch and correct its own mistakes before answering',
+            'Holds up on multi-step problems: arithmetic, planning, contradictory instructions',
+            'Can catch its own mistakes before answering',
           ],
-          lose: [
-            'You cannot inspect the reasoning you paid for, so a wrong answer is harder to debug',
-          ],
+          lose: ['You cannot read the reasoning you paid for, so a wrong answer is harder to debug'],
         },
         'thinking off': {
-          gain: [
-            'Predictable cost and latency — no hidden variable-length step before the answer',
-            'Loses almost nothing on extraction, formatting, classification and rewriting',
-          ],
-          lose: [
-            'Degrades on genuinely hard reasoning, where it will answer confidently and wrongly rather than working it out',
-          ],
+          gain: ['Loses almost nothing on extraction, formatting, classification and rewriting'],
+          lose: ['Degrades on hard reasoning — answers confidently instead of working it out'],
         },
       },
-      flow:
-        'A model does not just read your prompt and answer it. Newer ones write out their ' +
-        'reasoning first — and that reasoning is generated text, so it is billed like any ' +
-        'other output, even though you never see it.',
     }),
   },
   {
@@ -228,7 +223,9 @@ export function renderCard(card, ctx) {
 
   // The trade-off belongs with the result, not the pitch — it is what the saving cost you,
   // so it sits at the bottom of the card where the numbers end.
-  if (card.tradeoff) {
+  // Only when there is no gain/lose panel. A card with both rendered the same argument
+  // twice, once as prose and once as bullets.
+  if (card.tradeoff && !card.hasTradeoffPanel) {
     body.append(
       el('details', { class: 'tradeoff' }, [
         el('summary', {}, 'What it costs you'),

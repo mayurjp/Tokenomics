@@ -75,9 +75,12 @@ function list(items, kind) {
   ));
 }
 
-function column(label, m, judged) {
-  const gains = [...m.gain, ...(judged?.gain ?? []).map((text) => ({ text, judgement: true }))];
-  const loses = [...m.lose, ...(judged?.lose ?? []).map((text) => ({ text, judgement: true }))];
+function column(label, m, judged, tag = true) {
+  // The "not measured here" tag distinguishes judgement from measurement. Where every
+  // bullet is judgement, the tag marks nothing and is just noise on each line.
+  const mark = (text) => (tag ? { text, judgement: true } : text);
+  const gains = [...m.gain, ...(judged?.gain ?? []).map(mark)];
+  const loses = [...m.lose, ...(judged?.lose ?? []).map(mark)];
 
   return el('div', { class: 'trade-col' }, [
     el('div', { class: 'pair-title muted' }, label),
@@ -86,7 +89,9 @@ function column(label, m, judged) {
   ]);
 }
 
-export function createTradeoff(config) {
+// judgementOnly: for cards whose diagram already carries tokens, time and money. Repeating
+// those as bullets here is the duplication this panel was meant to end, not add to.
+export function createTradeoff(config, judgementOnly = false) {
   const node = el('section', { class: 'tradeoff-panel', hidden: '' });
 
   return {
@@ -103,10 +108,18 @@ export function createTradeoff(config) {
       node.replaceChildren(
         el('h4', {}, 'What you gain, what you lose'),
         el('div', { class: 'trade-grid' },
-          ok.map((r, i) => column(r.variant, measured(r, ok[i === 0 ? 1 : 0]), config[r.variant]))),
+          ok.map((r, i) => column(
+            r.variant,
+            judgementOnly ? { gain: [], lose: [] } : measured(r, ok[i === 0 ? 1 : 0]),
+            config[r.variant],
+            !judgementOnly
+          ))),
         el('p', { class: 'muted small' },
-          'Tokens, money and time are measured from the run above. Anything tagged ' +
-          '“not measured here” is guidance — this page measures cost, not answer quality.')
+          judgementOnly
+            ? 'The numbers are in the diagram above. These are the parts a token count cannot ' +
+              'settle — this page measures cost, not answer quality.'
+            : 'Tokens, money and time are measured from the run above. Anything tagged ' +
+              '“not measured here” is guidance — this page measures cost, not answer quality.')
       );
     },
   };

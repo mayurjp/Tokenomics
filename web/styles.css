@@ -372,3 +372,28 @@ details.tradeoff p { margin: .6rem 0 0; font-size: .9rem; color: var(--muted); m
   font-size: .65rem; text-transform: uppercase; letter-spacing: .04em;
   color: var(--muted); white-space: nowrap;
 }
+
+/* ---- prediction ---- */
+.predict { margin-bottom: 1.4rem; }
+.predict-q { margin: 0 0 .6rem; font-size: .9rem; }
+.predict-chip { min-width: 4.2rem; }
+.predict-chip:disabled { opacity: .5; cursor: default; }
+.predict-chip.active:disabled { opacity: 1; }
+
+.predict-outcome {
+  margin: .9rem 0 0; padding: .7rem .9rem;
+  border-left: 3px solid var(--muted); border-radius: 0 6px 6px 0;
+  background: var(--bg); font-size: .9rem;
+}
+.predict-outcome[hidden] { display: none; }
+.predict-outcome.is-close { border-left-color: var(--flow-output); }
+.predict-outcome.is-off { border-left-color: var(--flow-think); }
+
+/* ---- compact card ---- */
+.verdict { margin: 1.1rem 0 0; font-size: .95rem; }
+details.answers { margin-top: .9rem; }
+details.answers > summary { cursor: pointer; font-size: .82rem; color: var(--muted); margin-bottom: .5rem; }
+.answer + .answer { margin-top: 0; }
+
+/* The flow's right-hand cell now carries three facts, so it needs room. */
+.flow-head, .flow-row { grid-template-columns: 5.5rem minmax(0, 13rem) minmax(0, 1fr) 8rem; }

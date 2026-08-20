@@ -9,6 +9,7 @@ import { measure } from './api.js';
 import { createMeter } from './meter.js';
 import { createFlow } from './flow.js';
 import { createTradeoff } from './tradeoff.js';
+import { createPrediction } from './predict.js';
 import { costOf, atVolume, usd, isPriced, RUNS_PER_MONTH, PRICING_DATE } from './pricing.js';
 
 const METRIC_LABEL = {
@@ -81,11 +82,12 @@ function promptBlock(variant) {
 // One column per variant, holding everything about it in one place: what was sent, what it
 // cost, what came back. Rendered before a run too, so you can read what is about to be
 // spent — with a placeholder where the numbers will go rather than an empty gap.
-function variantColumn(variant, outcome, highlight) {
+function variantColumn(variant, outcome, highlight, compact) {
   const head = [
     el('div', { class: 'pair-title muted' }, variant.label),
-    promptBlock(variant),
-  ];
+    // In compact mode the prompt is identical across variants and is shown once above.
+    compact ? null : promptBlock(variant),
+  ].filter(Boolean);
 
   if (!outcome) {
     return el('div', { class: 'pair-side' }, [
@@ -103,6 +105,16 @@ function variantColumn(variant, outcome, highlight) {
 
   const r = outcome.result;
   const cost = costOf(r.stats, r.model);
+
+  // Compact mode: the flow rows already carry tokens, time and money, and the responses are
+  // shown once beneath. The column would otherwise be a third restatement of both.
+  if (compact) {
+    return el('div', { class: 'pair-side' }, [
+      ...head,
+      r.truncated ? el('p', { class: 'badge-inline' }, 'truncated by the output cap') : null,
+    ].filter(Boolean));
+  }
+
   return el('div', { class: 'pair-side' }, [
     ...head,
     statsTable(r.stats, highlight),
@@ -114,6 +126,65 @@ function variantColumn(variant, outcome, highlight) {
     r.truncated ? el('p', { class: 'badge-inline' }, 'truncated by the output cap') : null,
     el('h4', {}, 'Response'),
     el('pre', { class: 'response small' }, r.response_text || '(empty)'),
+  ]);
+}
+
+// Two prompts that are byte-identical carry no information twice over; the same goes for
+// two answers. Detected rather than assumed, so a variant that really does differ still
+// shows both.
+const sameText = (values) => values.every((v) => v === values[0]);
+
+function sharedPromptBlock(variants) {
+  const keys = variants.map((v) => `${v.systemInstruction ?? ''}||${v.prompt}`);
+  return sameText(keys) ? promptBlock(variants[0]) : null;
+}
+
+// The answers are the evidence that quality did not change, so they stay reachable — but
+// when they are the same answer twice, showing both by default just doubles the reading.
+function answersBlock(variants, outcomes) {
+  const results = outcomes.map((o) => o?.result).filter(Boolean);
+  if (results.length === 0) return null;
+
+  const texts = results.map((r) => r.response_text || '');
+  const identical = sameText(texts);
+
+  const both = results.map((r, i) =>
+    el('div', { class: 'answer' }, [
+      el('div', { class: 'pair-title muted' }, variants[i]?.label ?? `answer ${i + 1}`),
+      el('pre', { class: 'response small' }, r.response_text || '(empty)'),
+    ]));
+
+  if (!identical) {
+    return el('div', {}, [el('h4', {}, 'Responses'), el('div', { class: 'pair-grid' }, both)]);
+  }
+
+  return el('details', { class: 'answers' }, [
+    el('summary', {}, 'Same answer both times — compare them'),
+    el('pre', { class: 'response small' }, texts[0] || '(empty)'),
+  ]);
+}
+
+// One sentence standing in for a savings line, a money line and two stats tables. The
+// numbers are already in the diagram above, so this says only what they cannot: that the
+// two runs answered the same question, and how much more one of them cost to do it.
+function verdictLine(demo, outcomes) {
+  const ok = demo.variants
+    .map((v, i) => ({ variant: v, result: outcomes[i]?.result }))
+    .filter((o) => o.result);
+
+  if (ok.length < 2) return null;
+
+  const totals = ok.map((o) => o.result.stats.total_tokens ?? 0);
+  const dearest = Math.max(...totals);
+  const cheapest = Math.min(...totals);
+  if (cheapest === 0) return null;
+
+  const identical = sameText(ok.map((o) => o.result.response_text || ''));
+
+  return el('p', { class: 'verdict' }, [
+    el('span', {}, identical ? 'Same question, same answer — ' : 'Same question — '),
+    el('strong', {}, `${(dearest / cheapest).toFixed(1)}x the cost`),
+    el('span', {}, ` for ${ok[totals.indexOf(dearest)].variant.label}.`),
   ]);
 }
 
@@ -191,22 +262,28 @@ export function runnerCard(demoId, options = {}) {
     const meter = createMeter();
     // Opt-in per card. The diagram is being proven on one lesson first; turning it on for
     // another is adding flow to that card's options, nothing more.
-    const flow = options.flow ? createFlow(options.flow) : null;
-    const trade = options.tradeoffs ? createTradeoff(options.tradeoffs) : null;
+    // flow: true renders the diagram with no explainer paragraph; a string supplies one.
+    const flow = options.flow ? createFlow(typeof options.flow === 'string' ? options.flow : null) : null;
+    const trade = options.tradeoffs ? createTradeoff(options.tradeoffs, options.compact === true) : null;
+    const predict = options.predict ? createPrediction(options.predict) : null;
+    const compact = options.compact === true;
     const button = el('button', { type: 'button' }, options.runLabel ?? 'Run');
 
     // Columns exist from the start, holding the prompts. Running fills in the numbers
     // beneath each one rather than replacing the whole block.
     const columns = (outcomes) =>
       el('div', { class: 'pair-grid' },
-        demo.variants.map((v, i) => variantColumn(v, outcomes?.[i], demo.compare)));
+        demo.variants.map((v, i) => variantColumn(v, outcomes?.[i], demo.compare, compact)));
+
+    // Compact cards show the shared prompt once, above everything.
+    const shared = compact ? sharedPromptBlock(demo.variants) : null;
 
     button.addEventListener('click', async () => {
       button.disabled = true;
       button.textContent = 'Running…';
       out.replaceChildren(
-        columns(null),
-        el('p', { class: 'muted' }, `Running ${demo.variants.length} calls…`)
+        ...[compact ? null : columns(null),
+            el('p', { class: 'muted' }, `Running ${demo.variants.length} calls…`)].filter(Boolean)
       );
 
       // Sequential, never parallel. Two identical prompts in flight at once is exactly the
@@ -238,17 +315,27 @@ export function runnerCard(demoId, options = {}) {
       }));
 
       if (trade) trade.update(runs);
-      if (flow) {
-        flow.update(runs);
-      }
 
-      const line = summary(demo, outcomes);
-      const money = moneyLine(demo, outcomes);
+      // The reveal closes the diagram, so the guess and the answer sit together.
+      let reveal = null;
+      if (predict) {
+        const withThinking = runs.find((r) => r.stats && (r.stats.reasoning_tokens ?? 0) > 0);
+        if (withThinking) {
+          const share = (withThinking.stats.reasoning_tokens / withThinking.stats.total_tokens) * 100;
+          predict.reveal(share);
+          reveal = predict.outcomeNode;
+        }
+      }
+      if (flow) flow.update(runs, reveal);
+
+      const line = compact ? null : summary(demo, outcomes);
+      const money = compact ? null : moneyLine(demo, outcomes);
       // replaceChildren stringifies a null into the text "null" — unlike el(), which skips
       // it. Anything conditional has to be filtered out before it gets here.
       out.replaceChildren(
         ...[
-          columns(outcomes),
+          compact ? verdictLine(demo, outcomes) : columns(outcomes),
+          compact ? answersBlock(demo.variants, outcomes) : null,
           line ? el('p', { class: 'savings' }, line) : null,
           money,
           outcomes.every((o) => o.error)
@@ -261,11 +348,21 @@ export function runnerCard(demoId, options = {}) {
       button.textContent = options.runLabel ?? 'Run';
     });
 
-    out.replaceChildren(columns(null));
+    out.replaceChildren(...(compact ? [] : [columns(null)]));
 
     body.replaceChildren(
-      ...[flow?.node, el('div', { class: 'controls' }, [button]), out, trade?.node, meter.node]
-        .filter(Boolean)
+      // Reading order is the narrative: ask, show what gets sent, run, then the diagram
+      // fills in, then the verdict, then what it cost you. Results above the button that
+      // produces them reads backwards.
+      ...[
+        predict?.node,
+        shared,
+        el('div', { class: 'controls' }, [button]),
+        flow?.node,
+        out,
+        trade?.node,
+        meter.node,
+      ].filter(Boolean)
     );
   };
 }

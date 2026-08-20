@@ -15,6 +15,7 @@
 //    the rest of the page never invents a token count.
 
 import { el } from './dom.js';
+import { costOf, atVolume, usd, RUNS_PER_MONTH } from './pricing.js';
 
 const SEGMENTS = [
   { key: 'input_tokens', cls: 'seg-input', label: 'input', hint: 'the prompt you send' },
@@ -49,7 +50,9 @@ function describe(label, segs, total) {
   return `${label}: ${total.toLocaleString()} billed tokens — ${parts}.`;
 }
 
-function barRow(label, stats, scaleMax, model) {
+const secs = (ms) => (ms >= 10000 ? `${(ms / 1000).toFixed(0)}s` : `${(ms / 1000).toFixed(1)}s`);
+
+function barRow(label, stats, scaleMax, model, durationMs) {
   const segs = segmentsFor(stats);
   const total = segs.reduce((n, s) => n + s.value, 0);
 
@@ -72,7 +75,6 @@ function barRow(label, stats, scaleMax, model) {
       chip(`${(stats.input_tokens ?? 0).toLocaleString()} in`),
       arrow(),
       chip(model, 'flow-model'),
-      arrow(),
     ]),
     el('div', { class: 'flow-bar-wrap' }, [
       bar,
@@ -83,9 +85,14 @@ function barRow(label, stats, scaleMax, model) {
         ])
       )),
     ]),
+    // Total, time and money in one cell. These used to be a savings line, a money line and
+    // two per-column cost blocks, all restating this row.
     el('div', { class: 'flow-total' }, [
       el('strong', {}, total.toLocaleString()),
       el('span', { class: 'muted' }, ' billed'),
+      el('span', { class: 'muted small block' },
+        [durationMs ? secs(durationMs) : null, `${usd(atVolume(costOf(stats, model)))}/mo`]
+          .filter(Boolean).join(' · ')),
     ]),
   ]);
 }
@@ -98,7 +105,6 @@ function schematic() {
       chip('your prompt'),
       arrow(),
       chip('the model', 'flow-model'),
-      arrow(),
     ]),
     el('div', { class: 'flow-bar-wrap' }, [
       el('div', { class: 'flow-bar' }, [
@@ -130,9 +136,11 @@ export function createFlow(explainer) {
 
   const paint = (children) =>
     node.replaceChildren(
-      el('figcaption', { class: 'flow-explain' }, explainer),
-      header(),
-      ...children
+      ...[
+        explainer ? el('figcaption', { class: 'flow-explain' }, explainer) : null,
+        header(),
+        ...children,
+      ].filter(Boolean)
     );
 
   paint([
@@ -144,8 +152,9 @@ export function createFlow(explainer) {
   return {
     node,
 
-    // outcomes: [{ variant, stats }] in the order they ran.
-    update(runs) {
+    // runs: [{ variant, model, stats, durationMs }] in the order they ran.
+    // note: an optional node to close with — the prediction reveal, where a card has one.
+    update(runs, note) {
       const withStats = runs.filter((r) => r.stats);
       if (withStats.length === 0) return;
 
@@ -155,7 +164,9 @@ export function createFlow(explainer) {
 
       const notes = [];
       const hidden = withStats.find((r) => (r.stats.reasoning_tokens ?? 0) > 0);
-      if (hidden) {
+      if (note) {
+        notes.push(note);
+      } else if (hidden) {
         const s = hidden.stats;
         const share = Math.round(((s.reasoning_tokens ?? 0) / totals[withStats.indexOf(hidden)]) * 100);
         notes.push(
@@ -167,7 +178,7 @@ export function createFlow(explainer) {
       }
 
       paint([
-        ...withStats.map((r, i) => barRow(r.variant, r.stats, scaleMax, r.model)),
+        ...withStats.map((r) => barRow(r.variant, r.stats, scaleMax, r.model, r.durationMs)),
         ...notes,
       ]);
     },

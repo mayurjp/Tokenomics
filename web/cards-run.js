@@ -7,6 +7,7 @@
 import { el } from './dom.js';
 import { measure } from './api.js';
 import { createMeter } from './meter.js';
+import { createFlow } from './flow.js';
 import { costOf, atVolume, usd, isPriced, RUNS_PER_MONTH, PRICING_DATE } from './pricing.js';
 
 const METRIC_LABEL = {
@@ -139,6 +140,9 @@ export function runnerCard(demoId, options = {}) {
 
     const out = el('div', { class: 'output' });
     const meter = createMeter();
+    // Opt-in per card. The diagram is being proven on one lesson first; turning it on for
+    // another is adding flow to that card's options, nothing more.
+    const flow = options.flow ? createFlow(options.flow) : null;
     const button = el('button', { type: 'button' }, options.runLabel ?? 'Run');
 
     // The prompts are what the demo is actually about, so they are inspectable — but they
@@ -185,6 +189,16 @@ export function runnerCard(demoId, options = {}) {
         }
       }
 
+      if (flow) {
+        flow.update(
+          demo.variants.map((v, i) => ({
+            variant: v.label,
+            model: outcomes[i].result?.model ?? v.model,
+            stats: outcomes[i].result?.stats ?? null,
+          }))
+        );
+      }
+
       const line = summary(demo, outcomes);
       const money = moneyLine(demo, outcomes);
       // replaceChildren stringifies a null into the text "null" — unlike el(), which skips
@@ -205,6 +219,9 @@ export function runnerCard(demoId, options = {}) {
       button.textContent = options.runLabel ?? 'Run';
     });
 
-    body.replaceChildren(details, el('div', { class: 'controls' }, [button]), out, meter.node);
+    body.replaceChildren(
+      ...[flow?.node, details, el('div', { class: 'controls' }, [button]), out, meter.node]
+        .filter(Boolean)
+    );
   };
 }

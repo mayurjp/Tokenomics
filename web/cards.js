@@ -53,7 +53,13 @@ export const CARDS = [
     tradeoff:
       'Reasoning earns its cost on genuinely hard problems. Turning it off is close to free on extraction, formatting and classification, and expensive in accuracy on multi-step logic.',
     endpoint: gen('thinking'),
-    mount: runnerCard('thinking', { runLabel: 'Run both' }),
+    mount: runnerCard('thinking', {
+      runLabel: 'Run both',
+      flow:
+        'A model does not just read your prompt and answer it. Newer ones write out their ' +
+        'reasoning first — and that reasoning is generated text, so it is billed like any ' +
+        'other output, even though you never see it.',
+    }),
   },
   {
     id: 'caching',

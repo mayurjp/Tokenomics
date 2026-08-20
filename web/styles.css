@@ -6,6 +6,14 @@
   --panel: #f9fafb;
   --accent: #1d4ed8;
   --error: #b91c1c;
+
+  /* Diagram fills. Deliberately soft — the bar should read as a quiet illustration, not a
+     chart competing with the numbers beside it. Thinking carries the accent because it is
+     the part of the lesson people do not expect. */
+  --flow-input: #b6c2d2;
+  --flow-cache: #d8e2f0;
+  --flow-think: #4f7dd8;
+  --flow-output: #4aa79a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,6 +25,11 @@
     --panel: #191c22;
     --accent: #7aa2ff;
     --error: #f28b82;
+
+    --flow-input: #49556b;
+    --flow-cache: #333f56;
+    --flow-think: #6f9bff;
+    --flow-output: #3f9d92;
   }
 }
 
@@ -272,3 +285,66 @@ details.tradeoff p { margin: .6rem 0 0; font-size: .9rem; color: var(--muted); m
 
 .ref-table tr.hit th, .ref-table tr.hit td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .hit-badge { color: var(--accent); font-weight: 600; }
+
+/* ---- token flow diagram ---- */
+.flow { margin: 0 0 1.5rem; padding: 0; }
+.flow-explain { margin: 0 0 1.1rem; font-size: .9rem; max-width: 44rem; color: var(--fg); }
+
+.flow-head {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 15rem) minmax(0, 1fr) 6rem;
+  gap: .75rem;
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--muted);
+  padding-bottom: .5rem; border-bottom: 1px solid var(--line);
+}
+/* Skip the label column so the two headers land on the pipeline and the bar. */
+.flow-head span:first-child { grid-column: 2; }
+.flow-head span:last-child { grid-column: 3; }
+
+.flow-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 15rem) minmax(0, 1fr) 6rem;
+  gap: .75rem; align-items: center;
+  padding: .8rem 0; border-bottom: 1px solid var(--line);
+}
+.flow-row-label { font-size: .82rem; font-weight: 600; }
+.flow-schematic .flow-row-label { font-weight: 400; }
+.flow-schematic .flow-bar { opacity: .45; }
+
+.flow-pipeline { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.flow-chip {
+  padding: .18rem .5rem; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); font-size: .75rem; white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.flow-model { color: var(--muted); }
+.flow-arrow { color: var(--muted); font-size: .9rem; }
+
+.flow-bar {
+  display: flex; width: 100%; height: 13px;
+  border-radius: 3px; overflow: hidden; background: var(--line);
+}
+.flow-seg { display: block; height: 100%; }
+.seg-input  { background: var(--flow-input); }
+.seg-cache  { background: var(--flow-cache); }
+.seg-think  { background: var(--flow-think); }
+.seg-output { background: var(--flow-output); }
+
+.flow-legend { display: flex; flex-wrap: wrap; gap: .25rem .9rem; margin-top: .4rem; }
+.flow-key { display: inline-flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--muted); }
+.flow-dot { width: .55rem; height: .55rem; border-radius: 2px; display: inline-block; }
+
+.flow-total { text-align: right; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.flow-note { margin: .9rem 0 0; font-size: .85rem; color: var(--muted); max-width: 46rem; }
+
+/* Narrow screens: the pipeline chips are the first thing worth dropping — the bar and its
+   legend carry the lesson on their own. */
+@media (max-width: 40rem) {
+  .flow-head { display: none; }
+  .flow-row { grid-template-columns: 1fr auto; gap: .4rem .75rem; }
+  .flow-row-label { grid-column: 1; }
+  .flow-total { grid-column: 2; }
+  .flow-pipeline { display: none; }
+  .flow-bar-wrap { grid-column: 1 / -1; }
+}

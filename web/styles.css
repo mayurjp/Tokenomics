@@ -373,22 +373,6 @@ details.tradeoff p { margin: .6rem 0 0; font-size: .9rem; color: var(--muted); m
   color: var(--muted); white-space: nowrap;
 }
 
-/* ---- prediction ---- */
-.predict { margin-bottom: 1.4rem; }
-.predict-q { margin: 0 0 .6rem; font-size: .9rem; }
-.predict-chip { min-width: 4.2rem; }
-.predict-chip:disabled { opacity: .5; cursor: default; }
-.predict-chip.active:disabled { opacity: 1; }
-
-.predict-outcome {
-  margin: .9rem 0 0; padding: .7rem .9rem;
-  border-left: 3px solid var(--muted); border-radius: 0 6px 6px 0;
-  background: var(--bg); font-size: .9rem;
-}
-.predict-outcome[hidden] { display: none; }
-.predict-outcome.is-close { border-left-color: var(--flow-output); }
-.predict-outcome.is-off { border-left-color: var(--flow-think); }
-
 /* ---- compact card ---- */
 .verdict { margin: 1.1rem 0 0; font-size: .95rem; }
 details.answers { margin-top: .9rem; }
@@ -397,3 +381,44 @@ details.answers > summary { cursor: pointer; font-size: .82rem; color: var(--mut
 
 /* The flow's right-hand cell now carries three facts, so it needs room. */
 .flow-head, .flow-row { grid-template-columns: 5.5rem minmax(0, 13rem) minmax(0, 1fr) 8rem; }
+
+/* ---- mechanism diagram ---- */
+.mech { margin: 1.4rem 0 0; padding: 0; }
+.mech[hidden] { display: none; }
+
+.mech-hook { margin: 0 0 .6rem; font-size: .92rem; }
+
+.mech-toggle {
+  padding: .3rem .8rem; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--bg); color: var(--fg); font-size: .82rem; font-weight: 500;
+}
+.mech-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+.mech-scroll { margin-top: .9rem; overflow-x: auto; }
+.mech-svg { display: block; width: 100%; min-width: 34rem; max-width: 42rem; height: auto; }
+
+/* Text inside the SVG. Sized in user units against the 660-wide viewBox, so it scales with
+   the drawing rather than fighting it. */
+.mech-svg text { font-family: inherit; fill: var(--fg); }
+.mech-label { font-size: 15px; }
+.mech-num { font-size: 13px; fill: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.mech-cap { font-size: 12px; fill: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.mech-muted { font-size: 13px; fill: var(--muted); }
+.mech-bill { font-size: 14px; fill: var(--fg); font-weight: 600; }
+
+.mech-box { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.mech-line { stroke: var(--flow-output); stroke-width: 1.5; }
+.mech-head { fill: var(--flow-output); }
+.mech-bracket { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+
+/* The reasoning branch: dotted because it is generated, and stopped because it never
+   arrives. Hidden until the reveal — the gap between the bill and what you can read is
+   the question the diagram answers. */
+.mech-think { opacity: 0; transition: opacity .18s ease; }
+.mech .revealed .mech-think,
+.mech.revealed .mech-think { opacity: 1; }
+.mech-think .mech-line { stroke: var(--flow-think); }
+.mech-dotted { stroke-dasharray: 3 4; }
+.mech-stop line { stroke: var(--error); stroke-width: 2; stroke-linecap: round; }
+
+

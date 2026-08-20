@@ -57,10 +57,7 @@ export const CARDS = [
       compact: true,
       // The diagram stays; its explainer paragraph does not, since it restated `lesson`.
       flow: true,
-      predict: {
-        question: 'Before you run it — how much of the bill do you think is reasoning you never see?',
-        choices: [10, 40, 75],
-      },
+      mechanism: true,
       // Judgement, not measurement. The panel tags these so they cannot be mistaken for
       // findings from the run. Three a side; the rest was padding.
       tradeoffs: {

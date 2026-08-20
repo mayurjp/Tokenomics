@@ -153,8 +153,11 @@ export function createFlow(explainer) {
     node,
 
     // runs: [{ variant, model, stats, durationMs }] in the order they ran.
-    // note: an optional node to close with — the prediction reveal, where a card has one.
-    update(runs, note) {
+    // note: an optional node to close the diagram with, in place of the standing note.
+    // suppressNote: for cards where something below already explains the split — the
+    // mechanism diagram says this better, and saying it twice is what we just spent a
+    // commit removing.
+    update(runs, note, suppressNote) {
       const withStats = runs.filter((r) => r.stats);
       if (withStats.length === 0) return;
 
@@ -166,7 +169,7 @@ export function createFlow(explainer) {
       const hidden = withStats.find((r) => (r.stats.reasoning_tokens ?? 0) > 0);
       if (note) {
         notes.push(note);
-      } else if (hidden) {
+      } else if (hidden && !suppressNote) {
         const s = hidden.stats;
         const share = Math.round(((s.reasoning_tokens ?? 0) / totals[withStats.indexOf(hidden)]) * 100);
         notes.push(

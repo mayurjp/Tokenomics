@@ -9,7 +9,7 @@ import { measure } from './api.js';
 import { createMeter } from './meter.js';
 import { createFlow } from './flow.js';
 import { createTradeoff } from './tradeoff.js';
-import { createPrediction } from './predict.js';
+import { createMechanism } from './mechanism.js';
 import { costOf, atVolume, usd, isPriced, RUNS_PER_MONTH, PRICING_DATE } from './pricing.js';
 
 const METRIC_LABEL = {
@@ -265,7 +265,7 @@ export function runnerCard(demoId, options = {}) {
     // flow: true renders the diagram with no explainer paragraph; a string supplies one.
     const flow = options.flow ? createFlow(typeof options.flow === 'string' ? options.flow : null) : null;
     const trade = options.tradeoffs ? createTradeoff(options.tradeoffs, options.compact === true) : null;
-    const predict = options.predict ? createPrediction(options.predict) : null;
+    const mech = options.mechanism ? createMechanism() : null;
     const compact = options.compact === true;
     const button = el('button', { type: 'button' }, options.runLabel ?? 'Run');
 
@@ -316,17 +316,10 @@ export function runnerCard(demoId, options = {}) {
 
       if (trade) trade.update(runs);
 
-      // The reveal closes the diagram, so the guess and the answer sit together.
-      let reveal = null;
-      if (predict) {
-        const withThinking = runs.find((r) => r.stats && (r.stats.reasoning_tokens ?? 0) > 0);
-        if (withThinking) {
-          const share = (withThinking.stats.reasoning_tokens / withThinking.stats.total_tokens) * 100;
-          predict.reveal(share);
-          reveal = predict.outcomeNode;
-        }
-      }
-      if (flow) flow.update(runs, reveal);
+      if (flow) flow.update(runs, null, Boolean(mech));
+      // The mechanism explains the run that just happened, so it needs the variant that
+      // actually did any thinking — there is nothing to explain about the one that did not.
+      if (mech) mech.update(runs.find((r) => r.stats && (r.stats.reasoning_tokens ?? 0) > 0));
 
       const line = compact ? null : summary(demo, outcomes);
       const money = compact ? null : moneyLine(demo, outcomes);
@@ -355,10 +348,10 @@ export function runnerCard(demoId, options = {}) {
       // fills in, then the verdict, then what it cost you. Results above the button that
       // produces them reads backwards.
       ...[
-        predict?.node,
         shared,
         el('div', { class: 'controls' }, [button]),
         flow?.node,
+        mech?.node,
         out,
         trade?.node,
         meter.node,

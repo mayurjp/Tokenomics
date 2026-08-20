@@ -20,6 +20,12 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
 
+    <!-- LinkedIn reads the author from article:author and reports it on the preview.
+         og:type stays "website" — this is a tool, not a dated article, so there is no
+         article:published_time to give and inventing one would be worse than omitting it. -->
+    <meta name="author" content="Mayur Patel" />
+    <meta property="article:author" content="Mayur Patel" />
+
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>

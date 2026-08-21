@@ -21,11 +21,20 @@ import { batchCard } from './cards-batch.js';
 import { semanticCacheCard } from './cards-semantic.js';
 import { finopsCard } from './cards-finops.js';
 import { kvCacheCard, promptCompressionCard, agenticMultiplierCard, roiCalculatorCard, multimodalCard, quadraticAttentionCard, speculativeDecodingCard, schemaMinificationCard } from './cards-advanced.js';
+import { interactiveRagCard } from './cards-interactive-rag.js';
+import { tokenizerCard } from './cards-tokenizer.js';
+import { cachingPlaygroundCard } from './cards-caching-playground.js';
+import { routingSandboxCard } from './cards-routing-sandbox.js';
+import { contextStufferCard } from './cards-context-stuffer.js';
+import { agenticSandboxCard } from './cards-agentic-sandbox.js';
+import { systemPromptsCard } from './cards-system-prompts.js';
+import { embeddingsCard } from './cards-embeddings.js';
 
 const count = (ctx) => ctx.countEndpoint ?? null;
 const gen = (demoId) => (ctx) => ctx.demos?.[demoId]?.variants?.[0]?.endpoint ?? null;
 
 export const CARDS = [
+
   {
     id: 'count-anything',
     title: 'Tokenizer',
@@ -238,6 +247,70 @@ export const CARDS = [
     mount: schemaMinificationCard,
     advanced: true,
   },
+  {
+    id: 'embeddings-space',
+    title: 'Embeddings Space',
+    lesson: 'Text is translated into mathematical coordinates. Words with similar meanings cluster together.',
+    endpoint: () => null,
+    mount: embeddingsCard,
+    learning: true,
+  },
+  {
+    id: 'system-prompts',
+    title: 'System vs User Prompts',
+    lesson: 'The System prompt is the invisible puppet master steering the model\'s tone, formatting, and constraints.',
+    endpoint: () => null,
+    mount: systemPromptsCard,
+    learning: true,
+  },
+  {
+    id: 'agentic-sandbox',
+    title: 'Agentic Workflows',
+    lesson: 'Trading inference cost for massive accuracy gains by breaking a single prompt into multiple agent steps.',
+    endpoint: () => null,
+    mount: agenticSandboxCard,
+    learning: true,
+  },
+  {
+    id: 'context-stuffer',
+    title: 'Context Window Stuffer',
+    lesson: 'Standard models lose information hidden in the middle of long prompts. Gemini 1.5 doesn\'t.',
+    endpoint: () => null,
+    mount: contextStufferCard,
+    learning: true,
+  },
+  {
+    id: 'routing-sandbox',
+    title: 'Model Routing Sandbox',
+    lesson: 'Test your intuition on when to use fast/cheap models vs slow/expensive ones.',
+    endpoint: () => null,
+    mount: routingSandboxCard,
+    learning: true,
+  },
+  {
+    id: 'caching-playground',
+    title: 'Context Caching',
+    lesson: 'See how keeping large contexts in memory drops your API bill by up to 90%.',
+    endpoint: () => null,
+    mount: cachingPlaygroundCard,
+    learning: true,
+  },
+  {
+    id: 'tokenizer-sandbox',
+    title: 'Tokenizer Sandbox',
+    lesson: 'Explore why characters do not equal tokens, and how languages and formatting impact cost.',
+    endpoint: () => null,
+    mount: tokenizerCard,
+    learning: true,
+  },
+  {
+    id: 'interactive-rag',
+    title: 'Interactive RAG',
+    lesson: 'Demonstrating semantic search and chunking for retrieval augmented generation.',
+    endpoint: () => 'POST /v1beta/models/gemini-embedding-001:embedContent',
+    mount: interactiveRagCard,
+    learning: true,
+  },
 ];
 
 export function renderCard(card, ctx) {
@@ -263,6 +336,7 @@ export function renderCard(card, ctx) {
     class: `card${endpoint ? '' : ' reference'}`,
     id: `card-${card.id}`,
     'data-advanced': card.advanced ? 'true' : 'false',
+    'data-learning': card.learning ? 'true' : 'false',
     // Each lesson carries its own hue, so the grid is scannable by colour and a card keeps
     // its identity when it becomes the whole page. Everything colourful downstream reads
     // this one variable.

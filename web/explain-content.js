@@ -8,6 +8,41 @@
 // the decision that tells you when to walk away, and it is written to be actionable.
 
 export const EXPLAIN = {
+  'embeddings-space': {
+    what: 'A 2D visualization of Embeddings (Vector Space).',
+    why: 'Models do not understand English. They understand math. By translating words into coordinates (embeddings), models can calculate the "semantic distance" between concepts. This is how Semantic Search (RAG) works: it simply finds the points in space that are mathematically closest to your query.',
+    how: 'Click on any word in the graph. The sandbox will calculate its distance to every other point, and highlight its nearest neighbors.'
+  },
+  'system-prompts': {
+    what: 'A sandbox demonstrating the power and priority of System instructions.',
+    why: 'When building LLM applications, you cannot trust the user\'s prompt to contain the rules (users often try to jailbreak or ignore them). The System Prompt is a privileged context area that strictly defines the model\'s persona, output format, and constraints.',
+    how: 'Change the System Prompt dropdown to alter the model\'s developer constraints. Then try asking the exact same User question in the chat and watch how the System constraints completely override and steer the response.'
+  },
+  'agentic-sandbox': {
+    what: 'A demonstration of Zero-Shot Prompting vs Agentic Workflows.',
+    why: 'Asking a model to do a massive, complex task in a single prompt (Zero-Shot) saves tokens but usually results in poor, buggy output. By breaking the task into a loop of smaller prompts (Planning, Coding, Reviewing, Refining) using agents, you spend more tokens but achieve production-level accuracy.',
+    how: 'Click "Run Zero-Shot" to see a single inference pass. Then click "Run Agentic Loop" to watch a multi-agent simulation step-by-step. Compare the final cost and accuracy of both approaches.'
+  },
+  'context-stuffer': {
+    what: 'A visual sandbox demonstrating the "Lost in the Middle" phenomenon (Context Window degradation) across large prompts.',
+    why: 'When passing massive documents into standard LLMs, they suffer from a U-shaped accuracy curve. They perfectly recall facts at the beginning (priming) and the end (recency bias), but hallucinate or completely miss facts hidden in the middle of the context. This ruins complex Tokenomics use-cases unless you use a specialized model.',
+    how: 'Adjust the "Haystack Size" to increase your context window. Then move the "Needle" to the Beginning, Middle, or End of the prompt. Click Query to see if a standard model can successfully retrieve the hidden fact.'
+  },
+  'routing-sandbox': {
+    what: 'A sandbox demonstrating Dynamic Model Routing—the practice of sending tasks to different models based on complexity.',
+    why: 'Using your smartest, most expensive model (like Gemini 1.5 Pro) for simple data extraction is a massive waste of money. Using your fastest, cheapest model (like Gemini 1.5 Flash) for complex reasoning will result in hallucinations and errors. Perfect tokenomics requires dynamic routing.',
+    how: 'Look at the top task in the queue. Decide if it requires complex reasoning or if it\'s a simple chore. Click the corresponding button to assign it to Flash or Pro and watch how your budget and accuracy meters react!'
+  },
+  'caching-playground': {
+    what: 'A demonstration of Prompt Caching, where a large context is kept in memory to avoid reprocessing it on every request.',
+    why: 'Sending a massive system prompt (like a whole codebase or book) for every user message is extremely slow and expensive because the model has to process the entire document every time. Prompt caching solves this.',
+    how: 'Send a message in the chat below. The first request takes time and costs full price as the 50,000 tokens are processed. Send a second message and watch the cost plummet as the context is instantly pulled from the cache instead!'
+  },
+  'tokenizer-sandbox': {
+    what: 'A visual demonstration of how text is chopped into smaller subword pieces called tokens.',
+    why: 'Many assume one word equals one token, or that characters have a fixed ratio to tokens. This is false. Certain languages or formats (like JSON) use significantly more tokens for the same amount of data, drastically impacting your API costs.',
+    how: 'Type text or use the presets to see our simulated visual tokenizer chop your string into colored chunks. Notice how Japanese or JSON formatting consumes tokens much faster than standard English text.'
+  },
   'count-anything': {
     what: 'A token is the chunk of text a model bills by — often a word, sometimes part of one. countTokens returns the exact count without running the model.',
     why: 'Sizing a prompt before you send it, and checking whether a rewrite actually made it cheaper.',
@@ -197,5 +232,11 @@ export const EXPLAIN = {
     why: 'In a 10-turn agentic loop, a 1,000-token OpenAPI schema costs 10,000 input tokens. Minifying it to 300 tokens saves 7,000 tokens.',
     whyNot: 'If you shorten a description too much, the model might not understand how to use the tool correctly, causing a logic failure.',
     how: 'Use Enums instead of verbose descriptions, shorten parameter names (e.g., "usr_id" instead of "user_account_identification_number"), and strip out redundant instructions.',
+  },
+  'interactive-rag': {
+    what: 'A stepwise demonstration of Retrieval-Augmented Generation (RAG) using semantic search.',
+    why: 'Sending an entire document (stuffing) is expensive. Chunking a document and retrieving only the relevant chunk saves LLM bandwidth and cost.',
+    whyNot: 'RAG requires embedding infrastructure (a vector database, a chunking strategy) which is complex to maintain compared to simply sending the whole document if it is short.',
+    how: 'Embed the user\'s prompt, compute cosine similarity against the embedded document chunks, and only send the top match(es) in the generation prompt.',
   },
 };

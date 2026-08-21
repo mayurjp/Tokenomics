@@ -126,23 +126,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tier toggle logic
   const btnStandard = document.getElementById('toggle-standard');
   const btnAdvanced = document.getElementById('toggle-advanced');
+  const btnLearning = document.getElementById('toggle-learning');
   
-  if (btnStandard && btnAdvanced) {
-    btnStandard.addEventListener('click', () => {
-      document.body.classList.remove('show-advanced');
-      btnStandard.classList.add('active');
+  if (btnStandard && btnAdvanced && btnLearning) {
+    const clearTiersAndNavigate = () => {
+      document.body.classList.remove('show-advanced', 'show-learning');
+      btnStandard.classList.remove('active');
       btnAdvanced.classList.remove('active');
-      // Re-run routing in case they were inside an advanced card that just got hidden
-      if (!cardIds().has(activeId()) || CARDS.find(c => c.id === activeId())?.advanced) {
-        history.replaceState(null, '', location.pathname + location.search);
+      btnLearning.classList.remove('active');
+      
+      // If the user is currently inside a card, navigate them out to the grid.
+      if (activeId()) {
+        history.pushState(null, '', location.pathname + location.search);
         route();
       }
+    };
+
+    btnStandard.addEventListener('click', () => {
+      clearTiersAndNavigate();
+      btnStandard.classList.add('active');
     });
     
     btnAdvanced.addEventListener('click', () => {
+      clearTiersAndNavigate();
       document.body.classList.add('show-advanced');
       btnAdvanced.classList.add('active');
-      btnStandard.classList.remove('active');
+    });
+
+    btnLearning.addEventListener('click', () => {
+      clearTiersAndNavigate();
+      document.body.classList.add('show-learning');
+      btnLearning.classList.add('active');
     });
   }
 });

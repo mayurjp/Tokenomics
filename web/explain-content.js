@@ -233,6 +233,30 @@ export const EXPLAIN = {
     whyNot: 'If you shorten a description too much, the model might not understand how to use the tool correctly, causing a logic failure.',
     how: 'Use Enums instead of verbose descriptions, shorten parameter names (e.g., "usr_id" instead of "user_account_identification_number"), and strip out redundant instructions.',
   },
+  'token-rule-of-three': {
+    what: 'Three multipliers stack on every request: roughly 1.3 tokens per word, output priced several times above input, and thinking (when the model reasons) billed as output you never see.',
+    why: 'Procurement and budgeting for a new feature, before any traffic exists to measure — this gives you the shape of the bill from the prompt length alone.',
+    whyNot: 'It is a planning estimate, not a bill. Real prompts tokenize unevenly by language and format, and not every call reasons.',
+    how: 'Multiply words by ~1.3 for input tokens, price output at the higher per-token rate, and add a further multiple for thinking tokens if the model reasons before answering.',
+  },
+  'budget-controller': {
+    what: 'A guard that tracks cumulative spend for a single task and force-stops the loop once it crosses a ceiling, instead of relying on a monthly cap to catch it after the fact.',
+    why: 'Any autonomous or retrying loop — validation failures, multi-step agents — where nothing else bounds how many times it tries again.',
+    whyNot: 'A ceiling that trips too low kills tasks that would have succeeded on the next attempt. Set it to what the completed task is actually worth, with margin.',
+    how: 'Add each step\'s cost to a running total after it runs; when the total crosses the ceiling, halt and escalate or fall back rather than retrying again.',
+  },
+  'cost-per-outcome': {
+    what: 'Total spend across every attempt — including retries and escalations — divided by the number of tasks that actually finished, rather than spend divided by calls made.',
+    why: 'Judging ROI on a feature: the per-call price on an invoice looks fine even when a third of tasks quietly retry or escalate before succeeding.',
+    whyNot: 'It needs an outcome to count, which means instrumenting success/failure per task, not just tokens per call.',
+    how: 'Sum cost across first attempts, retries and escalated fallbacks; divide by the count of tasks that reached a successful outcome.',
+  },
+  'finops-governance': {
+    what: 'A per-feature, per-team breakdown of spend with a $/resolution threshold, so an alert fires on the ratio rather than on the total.',
+    why: 'A single monthly invoice number cannot say which feature is expensive per unit of work — only a breakdown can, and only a threshold catches it automatically.',
+    whyNot: 'It is only as good as the tags on the underlying telemetry; an untagged call is invisible to every row in the table.',
+    how: 'Tag every call with a feature and team on write, aggregate spend and resolutions per tag, and flag rows where spend ÷ resolutions exceeds your threshold.',
+  },
   'interactive-rag': {
     what: 'A stepwise demonstration of Retrieval-Augmented Generation (RAG) using semantic search.',
     why: 'Sending an entire document (stuffing) is expensive. Chunking a document and retrieving only the relevant chunk saves LLM bandwidth and cost.',

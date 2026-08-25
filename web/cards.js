@@ -20,7 +20,7 @@ import { runnerCard } from './cards-run.js';
 import { batchCard } from './cards-batch.js';
 import { semanticCacheCard } from './cards-semantic.js';
 import { finopsCard } from './cards-finops.js';
-import { kvCacheCard, promptCompressionCard, agenticMultiplierCard, roiCalculatorCard, multimodalCard, quadraticAttentionCard, speculativeDecodingCard, schemaMinificationCard } from './cards-advanced.js';
+import { kvCacheCard, promptCompressionCard, agenticMultiplierCard, roiCalculatorCard, multimodalCard, quadraticAttentionCard, speculativeDecodingCard, schemaMinificationCard, tokenRuleOfThreeCard, budgetControllerCard, costPerOutcomeCard, finopsGovernanceCard } from './cards-advanced.js';
 import { interactiveRagCard } from './cards-interactive-rag.js';
 import { tokenizerCard } from './cards-tokenizer.js';
 import { cachingPlaygroundCard } from './cards-caching-playground.js';
@@ -245,6 +245,38 @@ export const CARDS = [
     lesson: 'Bloated tool schemas are a massive hidden cost per agentic turn.',
     endpoint: () => null,
     mount: schemaMinificationCard,
+    advanced: true,
+  },
+  {
+    id: 'token-rule-of-three',
+    title: 'The Rule of Three',
+    lesson: 'Words inflate to tokens, output outprices input, and thinking outprices output — three multipliers stacked on one request.',
+    endpoint: () => null,
+    mount: tokenRuleOfThreeCard,
+    advanced: true,
+  },
+  {
+    id: 'budget-controller',
+    title: 'The Budget Controller',
+    lesson: 'A circuit breaker for agent loops: track cumulative spend against a ceiling, and stop before the loop does.',
+    endpoint: () => null,
+    mount: budgetControllerCard,
+    advanced: true,
+  },
+  {
+    id: 'cost-per-outcome',
+    title: 'Cost per Outcome',
+    lesson: 'The invoice tells you cost per call. Retries and escalations mean cost per finished task is always higher.',
+    endpoint: () => null,
+    mount: costPerOutcomeCard,
+    advanced: true,
+  },
+  {
+    id: 'finops-governance',
+    title: 'FinOps Governance Dashboard',
+    lesson: 'One spend total hides which feature is actually expensive. Break it out by team, and alert on the ratio.',
+    endpoint: () => null,
+    mount: finopsGovernanceCard,
     advanced: true,
   },
   {

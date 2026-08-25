@@ -243,6 +243,272 @@ export function speculativeDecodingCard(body) {
   );
 }
 
+export function tokenRuleOfThreeCard(body) {
+  const RATE_IN = 3; // $ / 1M input tokens
+  const RATE_OUT = 15; // $ / 1M output tokens
+  const RATE_THINK = 15; // thinking is billed as output
+
+  const wordsSlider = el('input', { type: 'range', min: '50', max: '5000', step: '50', value: '1000', style: 'width: 100%; cursor: pointer;' });
+  const wordsLabel = el('div', { class: 'big' }, '1,000 words');
+
+  const tokenDisplay = el('div', { class: 'big' }, '1,300');
+  const inputBar = el('div', { class: 'flow-seg seg-input' });
+  const outputBar = el('div', { class: 'flow-seg seg-output' });
+  const thinkBar = el('div', { class: 'flow-seg seg-think' });
+  const costDisplay = el('div', { class: 'big' }, '$0.00');
+  const breakdown = el('p', { class: 'muted small' }, '');
+
+  function update() {
+    const words = parseInt(wordsSlider.value, 10);
+    wordsLabel.textContent = words.toLocaleString() + ' words';
+
+    // Rule of three: ~1.3x word->token inflation, output priced ~5x input,
+    // thinking (when present) adds a further multiple on top of the answer.
+    const inputTokens = Math.round(words * 1.3);
+    const outputTokens = Math.round(inputTokens * 0.3); // a reply shorter than the prompt
+    const thinkingTokens = Math.round(outputTokens * 2); // reasoning trace, never shown
+
+    const inputCost = (inputTokens / 1e6) * RATE_IN;
+    const outputCost = (outputTokens / 1e6) * RATE_OUT;
+    const thinkCost = (thinkingTokens / 1e6) * RATE_THINK;
+    const total = inputCost + outputCost + thinkCost;
+
+    tokenDisplay.textContent = inputTokens.toLocaleString();
+    costDisplay.textContent = '$' + total.toFixed(4);
+
+    const inputPct = (inputCost / total) * 100;
+    const outputPct = (outputCost / total) * 100;
+    const thinkPct = (thinkCost / total) * 100;
+    inputBar.style.width = inputPct + '%';
+    outputBar.style.width = outputPct + '%';
+    thinkBar.style.width = thinkPct + '%';
+
+    breakdown.textContent = `Input ${inputPct.toFixed(0)}% · Output ${outputPct.toFixed(0)}% · Thinking ${thinkPct.toFixed(0)}% of the bill — from ${inputTokens.toLocaleString()} input, ${outputTokens.toLocaleString()} output and ${thinkingTokens.toLocaleString()} thinking tokens.`;
+  }
+
+  wordsSlider.addEventListener('input', update);
+
+  body.replaceChildren(
+    el('p', { class: 'muted small' }, 'A prompt inflates by ~30% going from words to tokens. What you pay for it is decided almost entirely by the smaller, pricier half: output and thinking.'),
+    el('div', { style: 'margin-bottom: 1rem;' }, [
+      el('h4', { style: 'margin-bottom: 0.5rem;' }, 'Prompt Length'),
+      wordsSlider,
+      wordsLabel,
+    ]),
+    el('div', { class: 'pair-grid' }, [
+      el('div', { class: 'pair-side' }, [
+        el('h4', {}, 'Tokens (from words)'),
+        el('div', { class: 'readout' }, [tokenDisplay, el('div', { class: 'muted small' }, 'Input tokens, at 1.3x words')]),
+      ]),
+      el('div', { class: 'pair-side' }, [
+        el('h4', {}, 'Total Cost'),
+        el('div', { class: 'readout' }, [costDisplay, el('div', { class: 'muted small' }, 'Input + output + thinking')]),
+      ]),
+    ]),
+    el('div', { class: 'flow-bar', style: 'margin-top: 1rem;' }, [inputBar, outputBar, thinkBar]),
+    breakdown,
+  );
+
+  update();
+}
+
+export function budgetControllerCard(body) {
+  const STEP_TOKENS = [150, 450, 950, 1650, 2550, 3800, 5400, 7300];
+  const RATE_BLENDED = 6; // $ / 1M tokens, blended in/out for this simulation
+  const capInput = el('input', { type: 'number', min: '0.01', max: '1', step: '0.01', value: '0.15', style: 'width: 6rem;' });
+
+  let step = 0;
+  let cumulativeCost = 0;
+  let tripped = false;
+
+  const stepLabel = el('span', {}, 'Step 0 — idle');
+  const costDisplay = el('div', { class: 'big' }, '$0.0000');
+  const statusDisplay = el('p', { class: 'savings' }, 'Press "Agent retries" to start the loop.');
+  const runBtn = el('button', { type: 'button' }, 'Agent retries');
+  const resetBtn = el('button', { type: 'button', class: 'muted' }, 'Reset');
+
+  function attempt() {
+    if (tripped) return;
+    const tokens = STEP_TOKENS[Math.min(step, STEP_TOKENS.length - 1)];
+    const stepCost = (tokens / 1e6) * RATE_BLENDED;
+    cumulativeCost += stepCost;
+    step += 1;
+    stepLabel.textContent = `Step ${step} — retry spent ${tokens.toLocaleString()} tokens`;
+    costDisplay.textContent = '$' + cumulativeCost.toFixed(4);
+
+    const cap = parseFloat(capInput.value) || 0.15;
+    if (cumulativeCost >= cap) {
+      tripped = true;
+      statusDisplay.textContent = `Circuit breaker tripped at $${cumulativeCost.toFixed(4)} — budget ceiling was $${cap.toFixed(2)}. Halted after ${step} retries, escalating instead of continuing.`;
+      statusDisplay.style.borderLeftColor = 'var(--error)';
+      runBtn.setAttribute('disabled', 'true');
+    } else {
+      statusDisplay.textContent = `$${(cap - cumulativeCost).toFixed(4)} left in this task's budget.`;
+      statusDisplay.style.borderLeftColor = 'var(--accent)';
+    }
+  }
+
+  function reset() {
+    step = 0;
+    cumulativeCost = 0;
+    tripped = false;
+    stepLabel.textContent = 'Step 0 — idle';
+    costDisplay.textContent = '$0.0000';
+    statusDisplay.textContent = 'Press "Agent retries" to start the loop.';
+    statusDisplay.style.borderLeftColor = '';
+    runBtn.removeAttribute('disabled');
+  }
+
+  runBtn.addEventListener('click', attempt);
+  resetBtn.addEventListener('click', reset);
+
+  body.replaceChildren(
+    el('p', { class: 'muted small' }, 'A validation loop that fails keeps retrying, and each retry carries more history than the last. Without a ceiling, nothing stops it.'),
+    el('div', { style: 'margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem;' }, [
+      el('label', { class: 'muted small' }, 'Budget ceiling per task ($)'),
+      capInput,
+    ]),
+    el('div', { style: 'padding: 1.5rem; border: 1px solid var(--line); border-radius: 8px; text-align: center; margin-bottom: 1rem; background: var(--bg);' }, [
+      el('h3', {}, stepLabel),
+      el('div', { class: 'readout', style: 'margin-top: 1rem;' }, [costDisplay, el('div', { class: 'muted small' }, 'Cumulative session cost')]),
+    ]),
+    statusDisplay,
+    el('div', { class: 'controls', style: 'justify-content: center;' }, [runBtn, resetBtn]),
+  );
+}
+
+export function costPerOutcomeCard(body) {
+  const RATE_A = { in: 3, out: 15 };
+  const volumeSlider = el('input', { type: 'range', min: '1000', max: '5000000', step: '1000', value: '100000', style: 'width: 100%; cursor: pointer;' });
+  const volumeLabel = el('div', { class: 'big' }, '100,000');
+  const successSlider = el('input', { type: 'range', min: '50', max: '99', step: '1', value: '85', style: 'width: 100%; cursor: pointer;' });
+  const successLabel = el('div', { class: 'big' }, '85%');
+
+  const perCallDisplay = el('div', { class: 'big' }, '$0.00');
+  const perOutcomeDisplay = el('div', { class: 'big' }, '$0.00');
+  const verdictDisplay = el('p', { class: 'savings' }, '');
+
+  const IN_TOK = 500;
+  const OUT_TOK = 300;
+
+  function update() {
+    const volume = parseInt(volumeSlider.value, 10);
+    const successRate = parseInt(successSlider.value, 10) / 100;
+    volumeLabel.textContent = volume.toLocaleString() + ' tasks/mo';
+    successLabel.textContent = (successRate * 100).toFixed(0) + '%';
+
+    const perCallCost = (IN_TOK / 1e6) * RATE_A.in + (OUT_TOK / 1e6) * RATE_A.out;
+
+    const failRate = 1 - successRate;
+    // Failures retry once; three quarters of retries succeed, the remainder escalates
+    // to a flagship fallback costing 4x a normal call.
+    const retried = failRate;
+    const retrySucceeds = retried * 0.75;
+    const escalated = retried * 0.25;
+
+    const totalCost = volume * perCallCost * (1 + retried + escalated * 3);
+    const successfulOutcomes = volume * (successRate + retrySucceeds + escalated);
+    const costPerOutcome = totalCost / successfulOutcomes;
+
+    perCallDisplay.textContent = '$' + perCallCost.toFixed(6);
+    perOutcomeDisplay.textContent = '$' + costPerOutcome.toFixed(6);
+
+    const markup = ((costPerOutcome / perCallCost) - 1) * 100;
+    verdictDisplay.textContent = `The naive per-call price undercounts the real cost by ${markup.toFixed(0)}% once retries and escalations are folded in — total spend $${totalCost.toFixed(2)}/mo for ${Math.round(successfulOutcomes).toLocaleString()} completed outcomes.`;
+    verdictDisplay.style.borderLeftColor = markup > 10 ? 'var(--error)' : 'var(--accent)';
+  }
+
+  volumeSlider.addEventListener('input', update);
+  successSlider.addEventListener('input', update);
+
+  body.replaceChildren(
+    el('div', { style: 'margin-bottom: 1rem;' }, [
+      el('h4', { style: 'margin-bottom: 0.5rem;' }, 'Monthly Task Volume'),
+      volumeSlider,
+      volumeLabel,
+    ]),
+    el('div', { style: 'margin-bottom: 1.5rem;' }, [
+      el('h4', { style: 'margin-bottom: 0.5rem;' }, 'First-Attempt Success Rate'),
+      successSlider,
+      successLabel,
+    ]),
+    el('div', { class: 'pair-grid' }, [
+      el('div', { class: 'pair-side' }, [
+        el('h4', {}, 'Cost per Call'),
+        el('p', { class: 'muted small', style: 'margin-top: 0;' }, 'What the invoice line item implies'),
+        el('div', { class: 'readout' }, [perCallDisplay, el('div', { class: 'muted small' }, 'Naive unit cost')]),
+      ]),
+      el('div', { class: 'pair-side' }, [
+        el('h4', {}, 'Cost per Completed Task'),
+        el('p', { class: 'muted small', style: 'margin-top: 0;' }, 'Spend across every attempt, including failures'),
+        el('div', { class: 'readout' }, [perOutcomeDisplay, el('div', { class: 'muted small' }, 'True unit cost')]),
+      ]),
+    ]),
+    verdictDisplay,
+  );
+
+  update();
+}
+
+export function finopsGovernanceCard(body) {
+  const rows = [
+    { feature: 'Support triage', team: 'CX', spend: 6100, resolutions: 41000 },
+    { feature: 'Document summarizer', team: 'Ops', spend: 4900, resolutions: 3200 },
+    { feature: 'Internal search', team: 'Platform', spend: 3200, resolutions: 28500 },
+    { feature: 'Sales email drafts', team: 'Sales', spend: 2450, resolutions: 9100 },
+  ];
+
+  const thresholdInput = el('input', { type: 'number', min: '0.05', max: '2', step: '0.05', value: '0.30', style: 'width: 6rem;' });
+  const tbody = el('tbody');
+
+  function render() {
+    const threshold = parseFloat(thresholdInput.value) || 0.3;
+    tbody.replaceChildren(
+      ...rows.map((row) => {
+        const perOutcome = row.spend / row.resolutions;
+        const alert = perOutcome > threshold;
+        return el('tr', { style: alert ? 'background: color-mix(in srgb, var(--error) 10%, transparent);' : '' }, [
+          el('td', { style: 'padding: 0.5rem; border-bottom: 1px solid var(--line);' }, row.feature),
+          el('td', { style: 'padding: 0.5rem; border-bottom: 1px solid var(--line);' }, row.team),
+          el('td', { style: 'padding: 0.5rem; border-bottom: 1px solid var(--line); text-align: right;' }, '$' + row.spend.toLocaleString()),
+          el('td', { style: 'padding: 0.5rem; border-bottom: 1px solid var(--line); text-align: right;' }, row.resolutions.toLocaleString()),
+          el('td', {
+            style: `padding: 0.5rem; border-bottom: 1px solid var(--line); text-align: right; font-weight: 600; color: ${alert ? 'var(--error)' : 'var(--accent)'};`,
+          }, '$' + perOutcome.toFixed(3)),
+          el('td', { style: 'padding: 0.5rem; border-bottom: 1px solid var(--line);' }, alert ? '⚠ over threshold' : 'ok'),
+        ]);
+      }),
+    );
+  }
+
+  thresholdInput.addEventListener('input', render);
+
+  body.replaceChildren(
+    el('p', { class: 'muted small' }, 'The same monthly spend, broken out by feature. The aggregate total never shows which line is actually expensive per unit of work delivered.'),
+    el('div', { style: 'margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem;' }, [
+      el('label', { class: 'muted small' }, 'Alert threshold ($ / resolution)'),
+      thresholdInput,
+    ]),
+    el('div', { class: 'mech-scroll' }, [
+      el('table', { style: 'width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 32rem;' }, [
+        el('thead', {}, [
+          el('tr', {}, [
+            el('th', { style: 'text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--line);' }, 'Feature'),
+            el('th', { style: 'text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--line);' }, 'Team'),
+            el('th', { style: 'text-align: right; padding: 0.5rem; border-bottom: 2px solid var(--line);' }, 'Spend'),
+            el('th', { style: 'text-align: right; padding: 0.5rem; border-bottom: 2px solid var(--line);' }, 'Resolutions'),
+            el('th', { style: 'text-align: right; padding: 0.5rem; border-bottom: 2px solid var(--line);' }, '$/Resolution'),
+            el('th', { style: 'text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--line);' }, 'Status'),
+          ]),
+        ]),
+        tbody,
+      ]),
+    ]),
+  );
+
+  render();
+}
+
 export function schemaMinificationCard(body) {
   body.replaceChildren(
     el('div', { class: 'demo-banner' }, [

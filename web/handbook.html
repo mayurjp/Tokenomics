@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Ledger of Inference — Token Economics Explorer</title>
+  <meta name="description" content="A nine-chapter cost-engineering handbook on LLM token economics — conversational memory math, the layered optimization stack, agentic FinOps, budget controllers, and enterprise governance, every claim worked in numbers." />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --paper: #f3f4f0;
+    --paper-raised: #fbfbf9;
+    --ink: #1b1f1c;
+    --ink-soft: #4c544e;
+    --ink-faint: #7b8279;
+    --line: #d7d9d0;
+    --line-strong: #b9bcb0;
+    --accent: #2c6b4a;
+    --accent-soft: #e4ece5;
+    --accent-ink: #1d4a33;
+    --warn: #a8481f;
+    --warn-soft: #f4e5dc;
+    --warn-ink: #7c3315;
+    --mono-bg: #2a2e29;
+    --mono-ink: #eef0e9;
+    --mono-accent: #8fd6ac;
+    --shadow: 0 1px 2px rgba(20, 22, 18, 0.06), 0 6px 20px rgba(20, 22, 18, 0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #141613;
+      --paper-raised: #1b1e19;
+      --ink: #eceee7;
+      --ink-soft: #b3b8ab;
+      --ink-faint: #7d8377;
+      --line: #2c2f28;
+      --line-strong: #3c4038;
+      --accent: #6fbb90;
+      --accent-soft: #1f2c22;
+      --accent-ink: #9adcb7;
+      --warn: #e2926a;
+      --warn-soft: #2e2019;
+      --warn-ink: #f0ac86;
+      --mono-bg: #0f110e;
+      --mono-ink: #dfe4d8;
+      --mono-accent: #7fd1a2;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Public Sans", -apple-system, "Segoe UI", sans-serif;
+    font-size: 16.5px;
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+
+  a { color: var(--accent-ink); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  h1, h2, h3, h4 { font-family: "Newsreader", Georgia, serif; text-wrap: balance; color: var(--ink); }
+
+  code, .mono, table { font-variant-numeric: tabular-nums; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; }
+
+  /* ---------- shell ---------- */
+
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 clamp(1.25rem, 4vw, 3rem);
+  }
+
+  .backlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    text-decoration: none;
+    padding: 1.1rem 0 0;
+  }
+  .backlink:hover { color: var(--accent-ink); }
+
+  .masthead {
+    padding: 0 0 2.5rem;
+    margin-top: 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.1rem;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 1.4rem;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .masthead h1 {
+    font-size: clamp(2.3rem, 5vw, 3.4rem);
+    font-weight: 500;
+    line-height: 1.05;
+    margin: 0 0 1rem;
+    max-width: 18ch;
+  }
+
+  .masthead .dek {
+    max-width: 62ch;
+    font-size: 1.1rem;
+    color: var(--ink-soft);
+    margin: 0 0 1.75rem;
+  }
+
+  .masthead .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+  }
+  .masthead .meta strong { color: var(--ink-soft); font-weight: 500; }
+
+  /* rate card */
+  .ratecard {
+    margin-top: 2.25rem;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 1.25rem 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem 1.75rem;
+  }
+  .ratecard .rc-head {
+    grid-column: 1 / -1;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .rc-tier { font-size: 0.85rem; }
+  .rc-tier .name { font-weight: 600; color: var(--ink); display: block; margin-bottom: 0.3rem; }
+  .rc-tier .rate { font-family: "IBM Plex Mono", monospace; font-size: 0.86rem; color: var(--ink-soft); }
+  .rc-tier .rate b { color: var(--accent-ink); font-weight: 600; }
+
+  /* ---------- layout: rail + content ---------- */
+
+  .layout {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: clamp(2rem, 4vw, 4rem);
+    padding: 3rem 0 5rem;
+    align-items: start;
+  }
+
+  nav.toc {
+    position: sticky;
+    top: 2rem;
+    align-self: start;
+  }
+  nav.toc .toc-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.9rem;
+  }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+  nav.toc a {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 0.87rem;
+    line-height: 1.35;
+  }
+  nav.toc a:hover { background: var(--accent-soft); color: var(--accent-ink); }
+  nav.toc a .n { font-family: "IBM Plex Mono", monospace; color: var(--ink-faint); font-size: 0.78rem; flex-shrink: 0; }
+
+  .toc-mobile { display: none; }
+
+  main { min-width: 0; }
+
+  section.chapter {
+    padding-bottom: clamp(2.5rem, 5vw, 4rem);
+    margin-bottom: clamp(2.5rem, 5vw, 4rem);
+    border-bottom: 1px solid var(--line);
+    scroll-margin-top: 1.5rem;
+  }
+  section.chapter:last-of-type { border-bottom: none; }
+
+  .chapter-head { display: flex; align-items: baseline; gap: 0.9rem; margin-bottom: 0.6rem; }
+  .chapter-head .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1rem;
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    border-radius: 5px;
+    padding: 0.15rem 0.5rem;
+  }
+  .chapter-head h2 { font-size: clamp(1.5rem, 3vw, 1.9rem); font-weight: 500; margin: 0; }
+
+  .chapter > .dek { color: var(--ink-soft); max-width: 68ch; margin: 0.5rem 0 1.75rem; font-size: 1.02rem; }
+
+  h3.sub {
+    font-family: "Public Sans", sans-serif;
+    font-weight: 600;
+    font-size: 1.02rem;
+    color: var(--ink);
+    margin: 2rem 0 0.6rem;
+    padding-top: 1.5rem;
+    border-top: 1px dashed var(--line);
+  }
+  h3.sub:first-of-type { border-top: none; padding-top: 0; }
+
+  p { max-width: 68ch; margin: 0 0 0.9rem; color: var(--ink-soft); }
+  p strong { color: var(--ink); font-weight: 600; }
+  ul.plain { max-width: 68ch; padding-left: 1.2rem; color: var(--ink-soft); margin: 0 0 1rem; }
+  ul.plain li { margin-bottom: 0.4rem; }
+  ul.plain li strong { color: var(--ink); }
+
+  /* formula block */
+  .formula {
+    background: var(--mono-bg);
+    color: var(--mono-ink);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1.1rem 0 1.4rem;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  .formula .f-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mono-accent);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  .formula code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.92rem;
+    white-space: pre;
+    display: block;
+  }
+
+  /* trap callout */
+  .trap {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 1rem;
+    background: var(--warn-soft);
+    border: 1px solid var(--warn);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 8px 8px 0;
+    padding: 0.9rem 1.1rem;
+    margin: 1.2rem 0 1.5rem;
+    max-width: 68ch;
+  }
+  .trap .t-label {
+    grid-column: 1 / -1;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--warn-ink);
+    margin-bottom: 0.35rem;
+  }
+  .trap p { margin: 0; color: var(--warn-ink); font-size: 0.94rem; max-width: none; }
+
+  /* tables */
+  .table-wrap { overflow-x: auto; margin: 1.1rem 0 1.6rem; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; background: var(--paper-raised); font-size: 0.88rem; min-width: 460px; }
+  caption {
+    text-align: left;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+  }
+  th, td { text-align: left; padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  thead th { font-weight: 600; color: var(--ink); background: var(--accent-soft); font-size: 0.8rem; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--accent-soft); }
+  td.num, th.num { text-align: right; }
+  td.hi { color: var(--accent-ink); font-weight: 600; }
+  td.warn-cell { color: var(--warn-ink); font-weight: 600; }
+
+  /* result strip */
+  .result {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 2rem;
+    background: var(--accent-soft);
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    margin: 0 0 1.5rem;
+    max-width: 68ch;
+  }
+  .result .item { display: flex; flex-direction: column; gap: 0.15rem; }
+  .result .item .k { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); opacity: 0.85; }
+  .result .item .v { font-family: "IBM Plex Mono", monospace; font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+
+  /* stack diagram (chapter 2 close) */
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1.3rem 0 1.6rem;
+    max-width: 620px;
+  }
+  .stack .layer {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 0.8rem;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 0.6rem 0.9rem;
+  }
+  .stack .layer .idx {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    border-radius: 5px;
+    text-align: center;
+    font-size: 0.78rem;
+    padding: 0.2rem 0;
+  }
+  .stack .layer .lname { font-weight: 600; font-size: 0.92rem; }
+  .stack .layer .lwhen { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--ink-faint); }
+  .stack .arrow { align-self: center; margin-left: 13px; color: var(--ink-faint); font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; }
+
+  /* checklist / decision table (chapter 9) */
+  .decision td:first-child { color: var(--ink); font-weight: 500; white-space: normal; max-width: 26ch; }
+  .decision td:last-child { color: var(--accent-ink); font-weight: 600; white-space: normal; }
+  .decision td.sec { font-family: "IBM Plex Mono", monospace; color: var(--ink-faint); font-weight: 400; }
+
+  footer.colophon {
+    max-width: 68ch;
+    margin: 0 auto;
+    padding: 2.5rem clamp(1.25rem, 4vw, 3rem) 4rem;
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 880px) {
+    .layout { grid-template-columns: 1fr; padding-top: 1.5rem; }
+    nav.toc.desktop-only { display: none; }
+    .toc-mobile {
+      display: block;
+      margin-bottom: 2rem;
+      background: var(--paper-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .toc-mobile summary {
+      cursor: pointer;
+      padding: 0.8rem 1rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .toc-mobile ol { list-style: none; margin: 0; padding: 0 0.5rem 0.7rem; display: flex; flex-direction: column; gap: 0.1rem; }
+    .toc-mobile a { display: flex; gap: 0.6rem; padding: 0.45rem 0.6rem; border-radius: 6px; text-decoration: none; color: var(--ink-soft); font-size: 0.88rem; }
+    .toc-mobile a .n { font-family: "IBM Plex Mono", monospace; color: var(--ink-faint); font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <a class="backlink" href="./">&larr; Token Economics Explorer</a>
+</div>
+
+<div class="shell masthead">
+  <div class="eyebrow">Cost engineering reference</div>
+  <h1>The Ledger of Inference</h1>
+  <p class="dek">Nine chapters on where LLM spend actually goes and what stops it — from a single conversation's token math up through the architecture, the agent loop, and the dashboard that watches all of it. Every claim below is worked in numbers, not asserted.</p>
+  <div class="meta">
+    <span><strong>Scope</strong> — procurement through governance</span>
+    <span><strong>Method</strong> — worked examples on illustrative per-token rates</span>
+    <span><strong>Read time</strong> — ~35 min, or jump to any chapter</span>
+  </div>
+
+  <div class="ratecard">
+    <div class="rc-head">Illustrative rate card used throughout — three tiers, one blended cost story</div>
+    <div class="rc-tier">
+      <span class="name">Tier A — flagship</span>
+      <span class="rate">in <b>$3</b> / out <b>$15</b> <span class="mono">per 1M tok</span></span>
+    </div>
+    <div class="rc-tier">
+      <span class="name">Tier B — mid</span>
+      <span class="rate">in <b>$0.80</b> / out <b>$4</b> <span class="mono">per 1M tok</span></span>
+    </div>
+    <div class="rc-tier">
+      <span class="name">Tier C — light</span>
+      <span class="rate">in <b>$0.15</b> / out <b>$0.60</b> <span class="mono">per 1M tok</span></span>
+    </div>
+    <div class="rc-tier">
+      <span class="name">Cached input</span>
+      <span class="rate">&asymp;<b>10%</b> of that tier's input rate</span>
+    </div>
+  </div>
+</div>
+
+<div class="shell layout">
+
+  <nav class="toc desktop-only" aria-label="Table of contents">
+    <div class="toc-label">Contents</div>
+    <ol>
+      <li><a href="#ch1"><span class="n">01</span><span>Token fundamentals &amp; the procurement view</span></a></li>
+      <li><a href="#ch2"><span class="n">02</span><span>The layered cost-optimization stack</span></a></li>
+      <li><a href="#ch3"><span class="n">03</span><span>Agentic FinOps</span></a></li>
+      <li><a href="#ch4"><span class="n">04</span><span>The budget controller</span></a></li>
+      <li><a href="#ch5"><span class="n">05</span><span>Macro ROI &amp; hybrid architecture</span></a></li>
+      <li><a href="#ch6"><span class="n">06</span><span>Enterprise governance &amp; telemetry</span></a></li>
+      <li><a href="#ch7"><span class="n">07</span><span>Prompt caching internals</span></a></li>
+      <li><a href="#ch8"><span class="n">08</span><span>Tactical token reduction</span></a></li>
+      <li><a href="#ch9"><span class="n">09</span><span>Symptom &rarr; fix, a working checklist</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+  <details class="toc-mobile">
+    <summary>Table of contents</summary>
+    <ol>
+      <li><a href="#ch1"><span class="n">01</span><span>Token fundamentals</span></a></li>
+      <li><a href="#ch2"><span class="n">02</span><span>The optimization stack</span></a></li>
+      <li><a href="#ch3"><span class="n">03</span><span>Agentic FinOps</span></a></li>
+      <li><a href="#ch4"><span class="n">04</span><span>Budget controller</span></a></li>
+      <li><a href="#ch5"><span class="n">05</span><span>Macro ROI &amp; hybrid</span></a></li>
+      <li><a href="#ch6"><span class="n">06</span><span>Governance &amp; telemetry</span></a></li>
+      <li><a href="#ch7"><span class="n">07</span><span>Caching internals</span></a></li>
+      <li><a href="#ch8"><span class="n">08</span><span>Tactical reduction</span></a></li>
+      <li><a href="#ch9"><span class="n">09</span><span>Symptom &rarr; fix</span></a></li>
+    </ol>
+  </details>
+
+  <!-- ================= CHAPTER 1 ================= -->
+  <section class="chapter" id="ch1">
+    <div class="chapter-head"><span class="num">01</span><h2>Token fundamentals &amp; the procurement view</h2></div>
+    <p class="dek">Everything downstream — routing, caching, budgets, dashboards — is a response to four facts about how tokens are counted and priced. Start here or nothing else has units.</p>
+
+    <h3 class="sub">Words are not tokens</h3>
+    <p>A tokenizer splits text into subword pieces, not words. The common rule of thumb: <strong>1,000 words &asymp; 1,300 tokens</strong>, a 30% inflation that varies by language and format — dense, non-English scripts and machine formats both tokenize worse than plain English prose.</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Same sentence, different tokenizer bill</caption>
+        <thead><tr><th>Rendering</th><th class="num">Approx. tokens</th><th class="num">vs. English</th></tr></thead>
+        <tbody>
+          <tr><td>English — "Track every dollar the model spends."</td><td class="num">7</td><td class="num">1.0&times;</td></tr>
+          <tr><td>Hindi — same meaning, Devanagari script</td><td class="num">13</td><td class="num hi">1.9&times;</td></tr>
+          <tr><td>Japanese — same meaning</td><td class="num">15</td><td class="num hi">2.1&times;</td></tr>
+          <tr><td>As a JSON field: <span class="mono">{"instruction":"Track every dollar the model spends."}</span></td><td class="num">16</td><td class="num hi">2.3&times;</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="trap"><div class="t-label">Cost trap</div><p>Estimating token spend by counting words in the source language systematically underbids non-English and structured-data workloads by 2&times; or more.</p></div>
+
+    <h3 class="sub">Input and output are not the same product</h3>
+    <p>Every provider prices output higher than input — in this reference's rate card, <strong>5&times; on Tier A, 5&times; on Tier B, 4&times; on Tier C</strong>. A request's cost split is rarely 50/50; it follows how much the model had to generate versus read.</p>
+    <div class="formula"><span class="f-label">Per-request cost</span><code>cost = (input_tokens &divide; 1,000,000) &times; rate_in
+     + (output_tokens &divide; 1,000,000) &times; rate_out</code></div>
+    <div class="table-wrap">
+      <table>
+        <caption>500 input tokens, 300 output tokens, Tier A</caption>
+        <thead><tr><th>Component</th><th class="num">Tokens</th><th class="num">Rate /1M</th><th class="num">Cost</th><th class="num">Share</th></tr></thead>
+        <tbody>
+          <tr><td>Input</td><td class="num">500</td><td class="num">$3</td><td class="num">$0.0015</td><td class="num">25%</td></tr>
+          <tr><td>Output</td><td class="num">300</td><td class="num">$15</td><td class="num">$0.0045</td><td class="num hi">75%</td></tr>
+          <tr><td><strong>Total</strong></td><td class="num">800</td><td class="num">—</td><td class="num hi">$0.0060</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">Reasoning is generated text you never see</h3>
+    <p>On reasoning models, the "thinking" trace is produced token-by-token like any other output and billed at the output rate — then discarded before the answer is returned. The same prompt at two reasoning efforts:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Same prompt, minimal vs. high reasoning effort — Tier A output rate</caption>
+        <thead><tr><th>Effort</th><th class="num">Thinking tok.</th><th class="num">Answer tok.</th><th class="num">Billed output</th><th class="num">Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Minimal</td><td class="num">100</td><td class="num">200</td><td class="num">300</td><td class="num">$0.0045</td></tr>
+          <tr><td>High</td><td class="num">1,800</td><td class="num">200</td><td class="num">2,000</td><td class="num warn-cell">$0.0300</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="result">
+      <div class="item"><span class="k">Cost multiple</span><span class="v">6.7&times;</span></div>
+      <div class="item"><span class="k">Visible answer</span><span class="v">unchanged</span></div>
+    </div>
+
+    <h3 class="sub">Memory is resent, not remembered</h3>
+    <p>The model is stateless. Every turn re-sends the full transcript so far — the conversation's <em>input</em> cost is the sum of every prior turn, every time. Two message-size scenarios over 10 turns, Tier A:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Short exchanges — 50 tok user / 150 tok reply per turn</caption>
+        <thead><tr><th class="num">Turn</th><th class="num">Input sent</th><th class="num">Output</th><th class="num">Cumulative tok.</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td class="num">50</td><td class="num">150</td><td class="num">200</td></tr>
+          <tr><td class="num">5</td><td class="num">850</td><td class="num">150</td><td class="num">3,000</td></tr>
+          <tr><td class="num">10</td><td class="num">1,850</td><td class="num">150</td><td class="num hi">11,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <caption>Realistic exchanges — 300 tok user / 800 tok reply per turn</caption>
+        <thead><tr><th class="num">Turn</th><th class="num">Input sent</th><th class="num">Output</th><th class="num">Cumulative tok.</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td class="num">300</td><td class="num">800</td><td class="num">1,100</td></tr>
+          <tr><td class="num">5</td><td class="num">4,700</td><td class="num">800</td><td class="num">24,500</td></tr>
+          <tr><td class="num">10</td><td class="num">10,200</td><td class="num">800</td><td class="num warn-cell">60,500</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>At Tier A rates, that realistic 10-turn conversation costs <strong>52,500 input tok &times; $3/1M + 8,000 output tok &times; $15/1M &asymp; $0.28</strong>. Now drop one 250,000-token PDF into context and resend it every turn, unmanaged:</p>
+    <div class="result">
+      <div class="item"><span class="k">Without the PDF</span><span class="v">$0.28 / 10 turns</span></div>
+      <div class="item"><span class="k">With the PDF resent each turn</span><span class="v">$7.78 / 10 turns</span></div>
+      <div class="item"><span class="k">Multiple</span><span class="v">28&times;</span></div>
+    </div>
+    <div class="trap"><div class="t-label">Cost trap</div><p>A file dropped into chat context is not read once — it is re-billed on every subsequent turn until the conversation ends or the history is managed. Chapters 2 and 3 cover the fixes (retrieval instead of stuffing, and compaction).</p></div>
+
+    <h3 class="sub">Why this reads like a utility bill, not a seat license</h3>
+    <p>Token spend is metered, like electricity or gas — usage varies by the minute, not the month, and a single workload can spike spend well past a forecast built on averages. Treat it accordingly: variance bands and hard caps, not a flat per-seat line item. Chapter 5 works a heavy-user example; Chapter 6 covers the alerting that catches it before the invoice does.</p>
+  </section>
+
+  <!-- ================= CHAPTER 2 ================= -->
+  <section class="chapter" id="ch2">
+    <div class="chapter-head"><span class="num">02</span><h2>The layered cost-optimization stack</h2></div>
+    <p class="dek">Eight techniques, each intercepting a request at a different point before it reaches the most expensive model. None of them are alternatives to each other — a mature system runs all eight in sequence.</p>
+
+    <h3 class="sub">1 — Semantic caching</h3>
+    <p>Embed the incoming question, compare it against embeddings of past questions, and return the stored answer when similarity clears a threshold — typically cosine similarity &ge; 0.90. "What's our refund window?" and "How long do customers have to request a refund?" embed close enough to hit; "What's our refund window in the EU?" usually does not, since the jurisdiction changes the answer. A hit costs one embedding call and zero generation calls.</p>
+
+    <h3 class="sub">2 — Model routing</h3>
+    <p>Route by task shape, not by default. The same 500-in/300-out task across all three tiers:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>One task, three tiers</caption>
+        <thead><tr><th>Tier</th><th class="num">Cost</th><th class="num">vs. flagship</th></tr></thead>
+        <tbody>
+          <tr><td>Tier A — flagship</td><td class="num">$0.00600</td><td class="num">1&times;</td></tr>
+          <tr><td>Tier B — mid</td><td class="num">$0.00160</td><td class="num hi">3.75&times; cheaper</td></tr>
+          <tr><td>Tier C — light</td><td class="num">$0.00026</td><td class="num hi">23.5&times; cheaper</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">3 — Model cascading</h3>
+    <p>Attempt on Tier C; escalate to Tier A only when a validator (confidence score, schema check) fails. At a realistic 20% escalation rate, the escalated cases pay for both attempts:</p>
+    <div class="formula"><span class="f-label">Expected cost per request</span><code>E[cost] = cheap_cost + (escalation_rate &times; flagship_cost)
+        = $0.00026 + (0.20 &times; $0.00600)
+        = $0.00146   &larr; 4.1&times; cheaper than always-flagship ($0.00600)</code></div>
+
+    <h3 class="sub">4 — Prompt caching</h3>
+    <p>A 2,000-token system prompt reused across 50 calls, cached input at 10% of Tier A's rate:</p>
+    <div class="result">
+      <div class="item"><span class="k">Uncached, 50 calls</span><span class="v">$0.300</span></div>
+      <div class="item"><span class="k">Cached after call 1</span><span class="v">$0.035</span></div>
+      <div class="item"><span class="k">Reduction</span><span class="v">88%</span></div>
+    </div>
+
+    <h3 class="sub">5 — Context compaction</h3>
+    <p>Summarize older turns into a running digest instead of resending them verbatim. This is the direct fix for Chapter 1's 60,500-token conversation: summarizing every 5 turns caps the resent history near a fixed size instead of letting it grow linearly with turn count — the tradeoff is that a summary is lossy, and the detail it drops is invisible until someone asks for it.</p>
+
+    <h3 class="sub">6 — Batch processing</h3>
+    <p>For work nobody is waiting on synchronously, batch endpoints typically run at roughly half the interactive rate, in exchange for completion measured in minutes to hours instead of seconds. Rules it out the moment a user is staring at a spinner.</p>
+
+    <h3 class="sub">7 — Token-efficient prompting</h3>
+    <p>Structured output strips the conversational wrapper around an answer:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Same extraction task, prose vs. JSON</caption>
+        <thead><tr><th>Format</th><th class="num">Output tok.</th></tr></thead>
+        <tbody>
+          <tr><td>"Sure — the customer's name is Priya Nair, their order number is 48213, and it shipped on the 14th."</td><td class="num">26</td></tr>
+          <tr><td><span class="mono">{"name":"Priya Nair","order":48213,"shipped":"14th"}</span></td><td class="num hi">14</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">8 — Observability / FinOps telemetry</h3>
+    <p>None of the previous seven are verifiable without one event logged per call. Minimum viable shape: <span class="mono">model, tokens_in, tokens_out, cache_hit, cost, feature_tag, team_tag, outcome</span>. This is the raw material Chapter 6's dashboard consumes — a technique you can't measure is a technique you're guessing about.</p>
+
+    <h3 class="sub">Where each layer sits</h3>
+    <div class="stack">
+      <div class="layer"><span class="idx">1</span><span class="lname">Semantic cache check</span><span class="lwhen">before any model is touched</span></div>
+      <div class="arrow">&darr; miss</div>
+      <div class="layer"><span class="idx">2–3</span><span class="lname">Route or cascade</span><span class="lwhen">pick the cheapest tier likely to succeed</span></div>
+      <div class="arrow">&darr;</div>
+      <div class="layer"><span class="idx">4–5</span><span class="lname">Assemble prompt: cached prefix + compacted history</span><span class="lwhen">before the call is built</span></div>
+      <div class="arrow">&darr;</div>
+      <div class="layer"><span class="idx">6</span><span class="lname">Sync or batch</span><span class="lwhen">at dispatch</span></div>
+      <div class="arrow">&darr;</div>
+      <div class="layer"><span class="idx">7</span><span class="lname">Constrain output shape</span><span class="lwhen">in the request itself</span></div>
+      <div class="arrow">&darr;</div>
+      <div class="layer"><span class="idx">8</span><span class="lname">Log the event</span><span class="lwhen">after the response returns</span></div>
+    </div>
+    <div class="trap"><div class="t-label">Cost trap</div><p>Implementing one layer — usually caching, because it's the easiest — and calling the architecture "optimized" leaves the other seven multipliers untouched. They compound; skipping most of them leaves most of the 70% on the table.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 3 ================= -->
+  <section class="chapter" id="ch3">
+    <div class="chapter-head"><span class="num">03</span><h2>Agentic FinOps</h2></div>
+    <p class="dek">An agent turns one user request into a loop — plan, retrieve, act, validate — and each hop is its own billable call. Budget the workflow, not the first call.</p>
+
+    <h3 class="sub">The naive-estimate trap</h3>
+    <p>A 5-step loop where each step's prompt includes the growing history of every prior step:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Tokens per step, cumulative history appended each time</caption>
+        <thead><tr><th class="num">Step</th><th class="num">Tokens this step</th><th class="num">Cumulative</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1 — plan</td><td class="num">150</td><td class="num">150</td></tr>
+          <tr><td class="num">2 — retrieve</td><td class="num">450</td><td class="num">600</td></tr>
+          <tr><td class="num">3 — act</td><td class="num">950</td><td class="num">1,550</td></tr>
+          <tr><td class="num">4 — validate</td><td class="num">1,650</td><td class="num">3,200</td></tr>
+          <tr><td class="num">5 — respond</td><td class="num">2,550</td><td class="num warn-cell">5,750</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="result">
+      <div class="item"><span class="k">Budgeted (step 1 only)</span><span class="v">$0.0009</span></div>
+      <div class="item"><span class="k">Actually spent (blended ~$6/1M)</span><span class="v">$0.0345</span></div>
+      <div class="item"><span class="k">Underestimate</span><span class="v">38&times;</span></div>
+    </div>
+
+    <h3 class="sub">The RAG trap, inside the loop</h3>
+    <p>A retrieval step that injects a whole 4,000-token chunk when the answer lives in roughly 300 of them:</p>
+    <div class="formula"><span class="f-label">Relevance density</span><code>density = useful_tokens &divide; injected_tokens = 300 &divide; 4,000 = 7.5%</code></div>
+    <p>The other 92.5% — 3,700 tokens — is paid for at the input rate on every call that reuses this retrieval step: <strong>$0.0111 wasted per call</strong> at Tier A, before the model even starts answering.</p>
+
+    <h3 class="sub">The reliability multiplier</h3>
+    <p>Retries and multi-agent debate protect quality by repeating work — and repeated work is repeated billing:</p>
+    <div class="formula"><span class="f-label">Expected cost under retries</span><code>effective_cost = base_cost &times; (1 + retry_rate)</code></div>
+    <div class="table-wrap">
+      <table>
+        <caption>Base call $0.0060 (Tier A), three retry rates</caption>
+        <thead><tr><th class="num">Retry rate</th><th class="num">Effective cost</th></tr></thead>
+        <tbody>
+          <tr><td class="num">10%</td><td class="num">$0.0066</td></tr>
+          <tr><td class="num">30%</td><td class="num">$0.0078</td></tr>
+          <tr><td class="num">60%</td><td class="num warn-cell">$0.0096</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>A 3-way parallel debate is the same shape with a fixed multiplier instead of a rate: <span class="mono">effective_cost = base_cost &times; N</span> — three calls in flight regardless of whether any of them fail.</p>
+
+    <h3 class="sub">Selective memory, scored not summarized</h3>
+    <p>Rather than replaying full history or blindly summarizing it, score each prior turn on recency + relevance to the current step + an explicit pin flag, and carry forward only what clears a threshold. On the 5-step loop above, scoring typically holds the resent context near the size of steps 1–2 instead of letting it reach step 5's 2,550 tokens — the saving compounds every subsequent step, not just the current one.</p>
+
+    <h3 class="sub">Budgets as a design input, not a monitoring afterthought</h3>
+    <ul class="plain">
+      <li><strong>max_output_tokens</strong> — a hard ceiling per step, set before the loop runs.</li>
+      <li><strong>max_retries</strong> — a count, not an implicit "keep trying."</li>
+      <li><strong>cost_ceiling_per_task</strong> — the number Chapter 4's circuit breaker actually enforces.</li>
+    </ul>
+    <div class="trap"><div class="t-label">Cost trap</div><p>Sizing an agentic feature's budget off a single representative call, then discovering in production that the loop routinely runs 5–10 steps deep, each carrying more history than the last.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 4 ================= -->
+  <section class="chapter" id="ch4">
+    <div class="chapter-head"><span class="num">04</span><h2>Engineering the budget controller</h2></div>
+    <p class="dek">A circuit breaker for autonomous loops: not a monthly cap, a per-task guard that trips mid-flight.</p>
+
+    <h3 class="sub">The runaway-loop failure mode</h3>
+    <p>Left unbounded, a validation loop retries the same failing step, appending the failure to history each time — the same superlinear growth as Chapter 3's agent loop, except now it has no natural exit. Ten unchecked retries following that growth curve run past 25,000 tokens before anything stops it.</p>
+
+    <h3 class="sub">Circuit-breaker logic</h3>
+    <div class="formula"><span class="f-label">Guard, checked after every step</span><code>session_cost += step_cost
+
+if session_cost >= budget_ceiling:      # e.g. $0.15 / task
+    halt(reason="budget_exceeded")
+    return escalate_to_human_or_fallback()</code></div>
+    <p>The ceiling is a business number, not an engineering one — it's whatever the completed task is worth, with margin. A support-ticket resolution budgeted at $0.15 that trips the breaker at step 4 has failed cheaply; the same loop left unbounded fails expensively.</p>
+
+    <h3 class="sub">Asymmetric tiering inside the loop</h3>
+    <p>A 4-step loop — draft, extract, re-check, final judgment — run all-flagship versus tiered, with only the last step reserved for Tier A:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>4-step loop: all-flagship vs. tiered execution</caption>
+        <thead><tr><th>Strategy</th><th class="num">Cost</th></tr></thead>
+        <tbody>
+          <tr><td>All Tier A</td><td class="num">$0.0240</td></tr>
+          <tr><td>Tier C &times;3 (draft, extract, re-check) + Tier A &times;1 (judgment)</td><td class="num hi">$0.0068</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="result"><div class="item"><span class="k">Savings</span><span class="v">3.5&times;, same final-judgment model</span></div></div>
+
+    <h3 class="sub">Dynamic replanning</h3>
+    <p>When a step fails, replan from a trimmed context — the goal plus the specific failure reason — rather than the full transcript of everything tried so far. Replanning against the full failed history means every subsequent attempt pays to re-read its own prior mistakes; replanning against a two-line failure summary does not.</p>
+    <div class="trap"><div class="t-label">Cost trap</div><p>A retry budget with no cost ceiling still bounds attempts, not spend — five retries against a growing context can cost more than fifty against a flat one. Bound the dollar amount, not just the attempt count.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 5 ================= -->
+  <section class="chapter" id="ch5">
+    <div class="chapter-head"><span class="num">05</span><h2>Macro ROI &amp; hybrid architecture</h2></div>
+    <p class="dek">Zooming out from any single call: does the intelligence generated cost less than the outcome is worth, and does the org's forecasting model account for how usage-based spend actually behaves?</p>
+
+    <h3 class="sub">The seat-based pricing illusion</h3>
+    <p>A department budgets AI spend the way it budgets seats — a flat number per person per month. Usage-based pricing doesn't hold that shape:</p>
+    <div class="result">
+      <div class="item"><span class="k">Typical daily department spend</span><span class="v">$50</span></div>
+      <div class="item"><span class="k">One heavy user, 5,000 requests in a day</span><span class="v">$500</span></div>
+      <div class="item"><span class="k">Multiple of the daily budget</span><span class="v">10&times;, from one person</span></div>
+    </div>
+
+    <h3 class="sub">Over-engineering a trivial task</h3>
+    <p>A binary classification — 50 input tokens, 5 output tokens — run on flagship vs. light tier at volume:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>5,000,000 calls / month, identical output either way</caption>
+        <thead><tr><th>Tier</th><th class="num">Cost / call</th><th class="num">Cost / month</th></tr></thead>
+        <tbody>
+          <tr><td>Tier A — flagship</td><td class="num">$0.000225</td><td class="num warn-cell">$1,125</td></tr>
+          <tr><td>Tier C — light</td><td class="num">$0.0000105</td><td class="num hi">$52.50</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>$1,072 a month spent for zero quality difference</strong> — the task carries no reasoning to pay a reasoning-grade price for.</p>
+
+    <h3 class="sub">Cost-per-token vs. cost-per-completed-task</h3>
+    <div class="formula"><span class="f-label">The metric that matters to the business</span><code>cost_per_completed_task = total_cost_across_all_attempts &divide; successful_outcomes</code></div>
+    <p>100 tasks at $0.006/call, 85% first-try success; of the 15 failures, 12 succeed on retry and 3 escalate to a flagship fallback at $0.024:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Cost per completed task, worked</caption>
+        <thead><tr><th>Path</th><th class="num">Count</th><th class="num">Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Succeed on first attempt</td><td class="num">85</td><td class="num">$0.510</td></tr>
+          <tr><td>Succeed on retry</td><td class="num">12</td><td class="num">$0.090</td></tr>
+          <tr><td>Escalated to flagship</td><td class="num">3</td><td class="num">$0.072</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="result">
+      <div class="item"><span class="k">Naive cost / call</span><span class="v">$0.0060</span></div>
+      <div class="item"><span class="k">True cost / completed task</span><span class="v">$0.0069</span></div>
+      <div class="item"><span class="k">Hidden markup</span><span class="v">+15.5%</span></div>
+    </div>
+
+    <h3 class="sub">Hybrid architecture</h3>
+    <p>Blend a frontier API model for the reasoning-heavy edge of the workload with a self-hosted, quantized model for its high-volume, routine core. The API side buys elastic capacity and stays current with model quality; the self-hosted side buys cost stability that doesn't move with a provider's pricing page — at the cost of the operational burden of running it. The right split follows the workload's actual volume curve, not a blanket preference for either side.</p>
+    <div class="trap"><div class="t-label">Cost trap</div><p>Tracking only cost-per-token hides retries and escalations inside a rounding error — the number that matters for ROI is what a finished outcome cost, including every attempt it took to get there.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 6 ================= -->
+  <section class="chapter" id="ch6">
+    <div class="chapter-head"><span class="num">06</span><h2>Enterprise governance &amp; telemetry</h2></div>
+    <p class="dek">A monthly cloud invoice answers "how much," never "which feature, and was it worth it." Governance is the layer that makes those answerable.</p>
+
+    <h3 class="sub">The black-box invoice</h3>
+    <p>An aggregate monthly number — "$14,200 in model spend" — carries no information about which feature drove it, whether that feature is profitable, or whether the number is trending up because of growth or because of waste. The fix is not a bigger number; it's the same number, broken down.</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Same $14,200, broken down by feature</caption>
+        <thead><tr><th>Feature</th><th class="num">Spend</th><th class="num">Resolutions</th><th class="num">Cost / resolution</th></tr></thead>
+        <tbody>
+          <tr><td>Support triage</td><td class="num">$6,100</td><td class="num">41,000</td><td class="num hi">$0.149</td></tr>
+          <tr><td>Document summarizer</td><td class="num">$4,900</td><td class="num">3,200</td><td class="num warn-cell">$1.531</td></tr>
+          <tr><td>Internal search assistant</td><td class="num">$3,200</td><td class="num">28,500</td><td class="num hi">$0.112</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The aggregate number hides that the summarizer costs 10–13&times; more per completed unit of work than the other two features — the number worth investigating never shows up until it's broken out.</p>
+
+    <h3 class="sub">Minimum viable telemetry event</h3>
+    <div class="formula"><span class="f-label">One row per call</span><code>{
+  model, tokens_in, tokens_out, cache_hit,
+  cost, latency_ms, feature_tag, team_tag,
+  outcome: "success" | "fail" | "retry"
+}</code></div>
+
+    <h3 class="sub">What to derive from it</h3>
+    <ul class="plain">
+      <li><strong>Cost per resolved task</strong> — spend &divide; successful outcomes, per feature.</li>
+      <li><strong>Cache hit rate</strong> — the leading indicator that Chapter 2's caching layer is actually engaged.</li>
+      <li><strong>Tokens per request, trended</strong> — catches prompt bloat creeping in before it shows up in the bill.</li>
+      <li><strong>Spend per team, over time</strong> — attribution that survives a reorg, if the tag does.</li>
+    </ul>
+
+    <h3 class="sub">Alerting design</h3>
+    <div class="table-wrap">
+      <table>
+        <caption>Example thresholds</caption>
+        <thead><tr><th>Signal</th><th>Trigger</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>Daily spend</td><td>&gt;2&times; the 7-day rolling average</td><td>Page the feature owner</td></tr>
+          <tr><td>Cache hit rate</td><td>Drops below 60% for an hour</td><td>Check for a cache-key regression (Ch. 7)</td></tr>
+          <tr><td>Cost per resolution</td><td>Rises 25% week-over-week</td><td>Review recent prompt changes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="trap"><div class="t-label">Cost trap</div><p>Instrumenting spend without a feature or team tag produces a dashboard that can say a number went up, never why — which is the same blindness as the monthly invoice, with better graphics.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 7 ================= -->
+  <section class="chapter" id="ch7">
+    <div class="chapter-head"><span class="num">07</span><h2>Prompt caching internals</h2></div>
+    <p class="dek">The mechanism under Chapter 2's ~90% discount, and the one silent bug that switches it off.</p>
+
+    <h3 class="sub">Prefix hashing</h3>
+    <p>Providers commonly hash a prompt in fixed-size blocks from the start (a 256-token boundary is a widely reported figure) and route matching requests to a server still holding that prefix's computed state. The requirement that follows directly: the first block of tokens must be <strong>byte-identical</strong> across calls, or the hash — and the cache hit — never happens.</p>
+
+    <h3 class="sub">What's actually cached</h3>
+    <p>Underneath the hash sits the GPU's key/value cache — the intermediate attention state computed for the prefix, held in memory rather than recomputed. A cache hit isn't "skip a network round trip"; it's "skip re-running the model over tokens it has already processed," which is where the discount comes from — genuinely less compute, not a lookup shortcut.</p>
+
+    <h3 class="sub">The invalidation bug</h3>
+    <p>The single most common way to silently lose the discount: a dynamic value — a timestamp, a user's name, a request ID — placed at the <em>top</em> of the system prompt. It changes every call, which changes the prefix hash, which invalidates the entire cached block behind it, no matter how large and stable the rest of the prompt is.</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Same system prompt, dynamic value moved</caption>
+        <thead><tr><th>Structure</th><th>Cache behavior</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">"Request at {timestamp}. You are a support agent…[3,000 stable tokens]"</span></td><td class="warn-cell">Never hits — hash changes every call</td></tr>
+          <tr><td><span class="mono">"You are a support agent…[3,000 stable tokens]. Request at {timestamp}."</span></td><td class="hi">Hits — stable prefix hashed once</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">TTLs differ by provider</h3>
+    <p>Cached prefixes expire. As reported at the API layer, retention windows differ meaningfully by provider — commonly cited figures are on the order of an hour for some providers and single-digit minutes for others. A workload with gaps longer than the shorter window needs to actively re-warm the cache (a cheap keep-alive call) or it silently falls back to full price between bursts of traffic.</p>
+
+    <h3 class="sub">Worked: a 20-step agent session</h3>
+    <p>A 3,000-token system prompt + tool definitions, resent on every one of 20 steps:</p>
+    <div class="result">
+      <div class="item"><span class="k">Uncached, 20 steps</span><span class="v">$0.180</span></div>
+      <div class="item"><span class="k">Cached after step 1</span><span class="v">$0.026</span></div>
+      <div class="item"><span class="k">Reduction</span><span class="v">85%</span></div>
+    </div>
+    <div class="trap"><div class="t-label">Cost trap</div><p>A cache hit rate that quietly drops to zero after a code change usually traces back to one variable moved to the wrong end of the prompt — it fails silently, at full price, with no error to surface it.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 8 ================= -->
+  <section class="chapter" id="ch8">
+    <div class="chapter-head"><span class="num">08</span><h2>Tactical token reduction</h2></div>
+    <p class="dek">Small, code-level changes that compound at volume — none of them architectural, all of them cheap to ship.</p>
+
+    <h3 class="sub">Strip conversational filler</h3>
+    <p>An unconstrained model pads answers with acknowledgement and sign-off text that carries no information:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Same code answer, with and without filler</caption>
+        <thead><tr><th>Response</th><th class="num">Tokens</th></tr></thead>
+        <tbody>
+          <tr><td>"Sure, here is the code you requested: […] Hope this helps! Let me know if you have any other questions."</td><td class="num">215</td></tr>
+          <tr><td>"[…]" (system prompt: answer only, no preamble or sign-off)</td><td class="num hi">200</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>15 tokens of pure filler, ~7% of that response — at 1,000,000 responses a month, <strong>$225</strong> spent on "Sure, here is" and "Hope this helps," at Tier A's output rate.</p>
+
+    <h3 class="sub">Minify JSON keys</h3>
+    <div class="table-wrap">
+      <table>
+        <caption>Same field, two schemas</caption>
+        <thead><tr><th>Key</th><th class="num">Tokens</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">customer_first_name_and_last_name</span></td><td class="num warn-cell">9</td></tr>
+          <tr><td><span class="mono">name</span></td><td class="num hi">1</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>8 tokens saved per field. At 10 fields per record and 1,000,000 records a month, that's <strong>80,000,000 output tokens</strong> — roughly <strong>$1,200</strong> — recovered purely by mapping short wire-format keys back to descriptive names in application code, where the model never has to pay to read them.</p>
+
+    <h3 class="sub">Chunk the workflow instead of one monolithic call</h3>
+    <p>Extract, reason, and format in one flagship call versus the same work split across three smaller, tier-matched calls:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>One 3-stage task, monolithic vs. chunked</caption>
+        <thead><tr><th>Approach</th><th class="num">Cost</th></tr></thead>
+        <tbody>
+          <tr><td>One Tier A call — extract + reason + format</td><td class="num warn-cell">$0.0114</td></tr>
+          <tr><td>Tier C extract &rarr; Tier A reason &rarr; Tier C format</td><td class="num hi">$0.0033</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="result"><div class="item"><span class="k">Reduction</span><span class="v">3.5&times;, same final quality on the step that needed it</span></div></div>
+    <div class="trap"><div class="t-label">Cost trap</div><p>None of these three fixes require a new architecture — they're the ones a team skips because each one looks too small to matter, right up until it's multiplied by volume.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 9 ================= -->
+  <section class="chapter" id="ch9">
+    <div class="chapter-head"><span class="num">09</span><h2>Symptom &rarr; fix, a working checklist</h2></div>
+    <p class="dek">Every technique in this handbook, indexed by the symptom that points to it.</p>
+
+    <div class="table-wrap">
+      <table class="decision">
+        <caption>Diagnosis table</caption>
+        <thead><tr><th>Symptom</th><th>Reach for</th><th>Chapter</th></tr></thead>
+        <tbody>
+          <tr><td>Conversation cost grows every turn, no ceiling in sight</td><td>Context compaction</td><td class="sec">02, 01</td></tr>
+          <tr><td>Same question, reworded, keeps hitting the model</td><td>Semantic caching</td><td class="sec">02</td></tr>
+          <tr><td>System prompt is large and sent on every call</td><td>Prompt caching + lean-prompt review</td><td class="sec">02, 07</td></tr>
+          <tr><td>Cache hit rate dropped after a deploy, for no obvious reason</td><td>Check for a dynamic value at the top of the prompt</td><td class="sec">07</td></tr>
+          <tr><td>An agent loop occasionally runs long and expensive</td><td>Budget controller (circuit breaker)</td><td class="sec">04</td></tr>
+          <tr><td>A loop that fails keeps failing more expensively on retry</td><td>Dynamic replanning on trimmed context</td><td class="sec">04</td></tr>
+          <tr><td>Simple classification is running on the flagship model</td><td>Model routing / cascading</td><td class="sec">02, 05</td></tr>
+          <tr><td>RAG answers are inconsistent despite large retrieved chunks</td><td>Relevance density review — retrieve less, more precisely</td><td class="sec">03</td></tr>
+          <tr><td>Retries or multi-agent debate are silently expensive</td><td>Model the reliability multiplier explicitly</td><td class="sec">03</td></tr>
+          <tr><td>Monthly bill is known, nothing else is</td><td>Per-call telemetry, tagged by feature/team</td><td class="sec">06</td></tr>
+          <tr><td>Cost per call looks fine, ROI still doesn't add up</td><td>Recompute as cost per completed task</td><td class="sec">05</td></tr>
+          <tr><td>One team's usage threatens to blow the shared budget</td><td>Per-team spend dashboards + spike alerts</td><td class="sec">06</td></tr>
+          <tr><td>Output is verbose, or the schema is verbose</td><td>Output capping, filler stripping, key minification</td><td class="sec">08</td></tr>
+          <tr><td>One giant prompt is doing extract + reason + format</td><td>Workflow chunking across tiers</td><td class="sec">08</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<footer class="colophon">
+  Rates throughout are an illustrative reference tier, not a live price sheet — actual per-token pricing varies by provider and model and changes over time; check current pricing before budgeting against it. Worked examples use round, representative token counts to keep the arithmetic legible, not measurements of a specific model.
+  <br /><br />
+  <a class="backlink" style="padding: 0;" href="./">&larr; Back to Token Economics Explorer</a>
+</footer>
+
+</body>
+</html>

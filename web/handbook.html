@@ -428,7 +428,7 @@
   <div class="meta">
     <span><strong>Scope</strong> — procurement through governance</span>
     <span><strong>Method</strong> — worked examples on illustrative per-token rates</span>
-    <span><strong>Read time</strong> — ~35 min, or jump to any chapter</span>
+    <span><strong>Read time</strong> — ~50 min, or jump to any chapter</span>
   </div>
 
   <div class="ratecard">
@@ -449,6 +449,10 @@
       <span class="name">Cached input</span>
       <span class="rate">&asymp;<b>10%</b> of that tier's input rate</span>
     </div>
+    <div class="rc-tier">
+      <span class="name">Embedding</span>
+      <span class="rate"><b>$0.02</b> <span class="mono">per 1M tok</span></span>
+    </div>
   </div>
 </div>
 
@@ -466,6 +470,10 @@
       <li><a href="#ch7"><span class="n">07</span><span>Prompt caching internals</span></a></li>
       <li><a href="#ch8"><span class="n">08</span><span>Tactical token reduction</span></a></li>
       <li><a href="#ch9"><span class="n">09</span><span>Symptom &rarr; fix, a working checklist</span></a></li>
+      <li><a href="#ch10"><span class="n">10</span><span>Embeddings &amp; vector store costs</span></a></li>
+      <li><a href="#ch11"><span class="n">11</span><span>Multimodal &amp; long-context economics</span></a></li>
+      <li><a href="#ch12"><span class="n">12</span><span>Case studies</span></a></li>
+      <li><a href="#ch13"><span class="n">13</span><span>Rollout playbook</span></a></li>
     </ol>
   </nav>
 
@@ -483,6 +491,10 @@
       <li><a href="#ch7"><span class="n">07</span><span>Caching internals</span></a></li>
       <li><a href="#ch8"><span class="n">08</span><span>Tactical reduction</span></a></li>
       <li><a href="#ch9"><span class="n">09</span><span>Symptom &rarr; fix</span></a></li>
+      <li><a href="#ch10"><span class="n">10</span><span>Embeddings &amp; vectors</span></a></li>
+      <li><a href="#ch11"><span class="n">11</span><span>Multimodal &amp; long context</span></a></li>
+      <li><a href="#ch12"><span class="n">12</span><span>Case studies</span></a></li>
+      <li><a href="#ch13"><span class="n">13</span><span>Rollout playbook</span></a></li>
     </ol>
   </details>
 
@@ -961,11 +973,161 @@ if session_cost >= budget_ceiling:      # e.g. $0.15 / task
     </div>
   </section>
 
+  <!-- ================= CHAPTER 10 ================= -->
+  <section class="chapter" id="ch10">
+    <div class="chapter-head"><span class="num">10</span><h2>Embeddings &amp; vector store costs</h2></div>
+    <p class="dek">Semantic caching (Ch. 2) and RAG (Ch. 3) both lean on an embedding step that rarely gets its own line in a budget — until the corpus grows and the "hidden data layer" becomes the majority of infra spend.</p>
+
+    <h3 class="sub">Embedding is priced separately, and much lower</h3>
+    <p>Embedding models are smaller and cheaper than generation models — in this reference, <strong>$0.02 per 1M tokens</strong>, roughly two orders of magnitude below Tier A generation. That gap is exactly why it's easy to under-budget: each individual call looks free.</p>
+    <div class="formula"><span class="f-label">Embedding cost</span><code>cost = (tokens_embedded &divide; 1,000,000) &times; $0.02</code></div>
+
+    <h3 class="sub">Indexing a corpus once</h3>
+    <p>10,000 support documents, averaging 500 tokens each:</p>
+    <div class="result">
+      <div class="item"><span class="k">Tokens embedded</span><span class="v">5,000,000</span></div>
+      <div class="item"><span class="k">One-time cost</span><span class="v">$0.10</span></div>
+    </div>
+
+    <h3 class="sub">The cost that compounds: query embedding at volume</h3>
+    <p>Every RAG lookup and every semantic-cache check embeds the incoming query too — small per call, but it runs on every request, not once:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Query embedding at ~20 tokens/query</caption>
+        <thead><tr><th class="num">Queries / day</th><th class="num">Tokens / day</th><th class="num">Cost / month</th></tr></thead>
+        <tbody>
+          <tr><td class="num">10,000</td><td class="num">200,000</td><td class="num">$0.12</td></tr>
+          <tr><td class="num">1,000,000</td><td class="num">20,000,000</td><td class="num hi">$12.00</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Cheap even at a million queries a day — the trap isn't the per-query rate, it's <strong>multi-query retrieval</strong> (expanding one user query into 3–5 reformulated sub-queries to improve recall), which multiplies this line directly: 5&times; the sub-queries is 5&times; this cost, before a single generation call runs.</p>
+
+    <h3 class="sub">Storage isn't token-priced, but it isn't free</h3>
+    <p>A 1536-dimension float32 vector is about 6&nbsp;KB. A managed vector store charges by storage and query volume, not tokens — illustratively, around <strong>$0.25 per GB-month</strong>:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Storage at scale</caption>
+        <thead><tr><th class="num">Vectors</th><th class="num">Size</th><th class="num">Cost / month</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1,000,000</td><td class="num">~6 GB</td><td class="num">$1.50</td></tr>
+          <tr><td class="num">100,000,000</td><td class="num">~600 GB</td><td class="num warn-cell">$150</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">The reindex bill nobody schedules for</h3>
+    <p>Switching embedding models — a newer one, a different dimensionality — means every existing vector is now incompatible and the whole corpus must be re-embedded, not just new documents:</p>
+    <div class="result">
+      <div class="item"><span class="k">Corpus</span><span class="v">10M docs &times; 800 tok</span></div>
+      <div class="item"><span class="k">Tokens to re-embed</span><span class="v">8,000,000,000</span></div>
+      <div class="item"><span class="k">One-time cost</span><span class="v">$160</span></div>
+    </div>
+    <p>The dollar figure is modest; the trap is elsewhere — this is hours of batch processing and a cutover window, not something to discover mid-incident because a model was swapped casually.</p>
+    <div class="trap"><div class="t-label">Cost trap</div><p>Embedding costs are individually invisible and collectively real: nobody notices the query-embedding line until multi-query retrieval or a corpus-wide reindex turns it into the largest single item in the infra bill.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 11 ================= -->
+  <section class="chapter" id="ch11">
+    <div class="chapter-head"><span class="num">11</span><h2>Multimodal &amp; long-context economics</h2></div>
+    <p class="dek">Two separate mechanisms, both underestimated for the same reason: neither charges by the thing you'd naturally count — pixels, or turns of context.</p>
+
+    <h3 class="sub">Images are billed in tiles, not pixels</h3>
+    <p>A common tiling scheme: a fixed base charge, plus a fixed charge per 512&times;512 tile the image is sliced into. Resolution decides tile count; tile count decides the bill.</p>
+    <div class="formula"><span class="f-label">Image tokens</span><code>tiles = ceil(width &divide; 512) &times; ceil(height &divide; 512)
+tokens = 85 + (tiles &times; 170)</code></div>
+    <div class="table-wrap">
+      <table>
+        <caption>100,000 product photos, one full pass, Tier A input rate</caption>
+        <thead><tr><th>Resolution</th><th class="num">Tiles</th><th class="num">Tokens / image</th><th class="num">Total tokens</th><th class="num">Cost</th></tr></thead>
+        <tbody>
+          <tr><td>512 &times; 512</td><td class="num">1</td><td class="num">255</td><td class="num">25,500,000</td><td class="num hi">$76.50</td></tr>
+          <tr><td>1024 &times; 1024</td><td class="num">4</td><td class="num">765</td><td class="num">76,500,000</td><td class="num warn-cell">$229.50</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Downscaling to the resolution the task actually needs — before upload, not after — is a 3&times; saving here with no code path more complex than a client-side resize.</p>
+
+    <h3 class="sub">Long context costs compute quadratically, not the invoice linearly</h3>
+    <p>Self-attention compares every token to every other token, so the underlying compute for a context of length N scales with N&sup2; — a 100k-token context is roughly <strong>100&times;</strong> the compute of a 10k one, not 10&times;. Providers absorb much of that behind a per-token price that scales far more gently, which is exactly why the cost is easy to underestimate: the <em>bill</em> looks linear even where the <em>compute</em>, and often the <em>latency</em>, does not.</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Same request shape, context length only</caption>
+        <thead><tr><th>Context</th><th class="num">Relative compute</th><th class="num">What the user notices</th></tr></thead>
+        <tbody>
+          <tr><td>10k tokens</td><td class="num">1&times;</td><td class="num">baseline latency</td></tr>
+          <tr><td>100k tokens</td><td class="num warn-cell">~100&times;</td><td class="num warn-cell">materially slower time-to-first-token</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>This is the mechanical reason RAG (Ch. 3) and context compaction (Ch. 2) pay off twice — they don't just cut the token bill, they cut the quadratic term driving latency.</p>
+    <div class="trap"><div class="t-label">Cost trap</div><p>Sending the maximum context window "just in case it's needed" pays the quadratic compute cost and the latency cost on every call, for information the model may never use — retrieve what's relevant instead of forwarding everything available.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 12 ================= -->
+  <section class="chapter" id="ch12">
+    <div class="chapter-head"><span class="num">12</span><h2>Case studies</h2></div>
+    <p class="dek">The worked numbers above are illustrative by design — deliberately round, so the arithmetic teaches the mechanism. These are reported outcomes from real deployments, included to show the same mechanisms holding up at production scale.</p>
+
+    <h3 class="sub">Prompt caching — Anthropic &amp; Notion</h3>
+    <p>Notion passes large volumes of user workspace data as context into its AI assistant. Implementing prefix-based prompt caching (Ch. 7) reportedly cut time-to-first-token by <strong>50%</strong> and API costs by <strong>60%</strong>.</p>
+    <p class="mono" style="font-size: 0.82rem;">Confirms: the ~85–90% cached-token discount in Ch. 2 and Ch. 7 isn't a lab number — it holds on real, large, per-user context.</p>
+
+    <h3 class="sub">Semantic caching — Zilliz / GPTCache</h3>
+    <p>Zilliz, makers of the Milvus vector database, report that in enterprise B2B applications, up to <strong>40%</strong> of user queries are semantically redundant. Layering GPTCache on top of an LLM pipeline reportedly cut API bills by <strong>nearly half</strong>.</p>
+    <p class="mono" style="font-size: 0.82rem;">Confirms: the semantic-caching mechanism in Ch. 2 targets a real, large share of traffic in support/FAQ-shaped workloads, not an edge case.</p>
+
+    <h3 class="sub">Prompt compression — Microsoft LLMLingua</h3>
+    <p>Microsoft Research's LLMLingua algorithmically compresses prompts <strong>2–3&times;</strong> before sending them to GPT-4, reportedly preserving entity-extraction accuracy while cutting directly into the (then) $0.03/1k-token inference cost.</p>
+    <p class="mono" style="font-size: 0.82rem;">Complements Ch. 8: where tactical reduction edits the prompt by hand, compression automates the same idea algorithmically for large, extraction-shaped documents.</p>
+
+    <h3 class="sub">Unmanaged agent history — Microsoft AutoGen</h3>
+    <p>Engineers running Microsoft AutoGen in production found that unmanaged agent histories caused context windows to balloon within roughly <strong>10 turns</strong>, forcing them to implement strict state-pruning to keep the system economically viable.</p>
+    <p class="mono" style="font-size: 0.82rem;">Confirms: Ch. 3's growth curve and Ch. 4's circuit breaker aren't a hypothetical failure mode — this is the same shape hitting a real multi-agent framework in the field.</p>
+
+    <h3 class="sub">Speculative decoding — Google DeepMind / Gemini</h3>
+    <p>Google DeepMind's Gemini infrastructure reportedly uses a small ~1B-parameter draft model alongside a ~70B target model, increasing tokens-per-second by <strong>~2.5&times;</strong> with no change to the final output.</p>
+    <p class="mono" style="font-size: 0.82rem;">A reminder that not every lever in this handbook is about the dollar figure — some, like this one, buy latency at a fixed infrastructure cost rather than trading quality for price.</p>
+
+    <div class="trap"><div class="t-label">Cost trap</div><p>Treating any single number above as a guarantee for a different workload — these are reported outcomes under specific traffic shapes, not universal multipliers. Measure your own before/after; use these as evidence the mechanism works, not as a forecast.</p></div>
+  </section>
+
+  <!-- ================= CHAPTER 13 ================= -->
+  <section class="chapter" id="ch13">
+    <div class="chapter-head"><span class="num">13</span><h2>Rollout playbook</h2></div>
+    <p class="dek">The chapters above are a reference, not a sequence — this is the sequence. Five stages, each one a prerequisite for the next to pay off.</p>
+
+    <div class="table-wrap">
+      <table class="decision">
+        <caption>Adoption stages</caption>
+        <thead><tr><th>Stage</th><th>Ship</th><th>You're ready to move on when</th></tr></thead>
+        <tbody>
+          <tr><td>0 — No visibility</td><td>Nothing yet — this is the starting state</td><td class="sec">You only know the monthly total (Ch. 6)</td></tr>
+          <tr><td>1 — Instrument</td><td>Per-call telemetry: tokens, cost, cache hit, feature/team tag (Ch. 6)</td><td class="sec">You can name your three most expensive features by cost, not guess</td></tr>
+          <tr><td>2 — Cache</td><td>Prompt caching on stable prefixes, semantic caching on repeated questions (Ch. 2, 7)</td><td class="sec">Cache hit rate is dashboarded and holding above target</td></tr>
+          <tr><td>3 — Route</td><td>Model routing / cascading by task shape, now that traffic is tagged (Ch. 2)</td><td class="sec">Trivial tasks are confirmed off the flagship tier</td></tr>
+          <tr><td>4 — Bound</td><td>Output caps, retry budgets, circuit breakers on agentic loops (Ch. 3, 4)</td><td class="sec">No task can spend past its ceiling, even mid-incident</td></tr>
+          <tr><td>5 — Govern</td><td>Dashboards, spend alerts, cost-per-outcome as the reported metric (Ch. 5, 6)</td><td class="sec">ROI conversations use cost-per-outcome, not cost-per-token</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">Why this order, specifically</h3>
+    <p>Caching before routing, because a cache hit is free regardless of which tier would have served it — optimizing routing on traffic that should have been cached is solving the wrong slice first. Routing before bounding, because you need to know what a normal call costs before you can set a sane ceiling for an abnormal one. Bounding before governing, because a dashboard that watches an unbounded system just reports the incident after it happens instead of prevents it.</p>
+
+    <h3 class="sub">This week, not this quarter</h3>
+    <ul class="plain">
+      <li><strong>Tag one feature.</strong> Add feature/team tags to your highest-volume LLM call site and start logging cost per call — the smallest version of Stage 1.</li>
+      <li><strong>Find one static prefix.</strong> Locate the system prompt or reference document resent unchanged on every call, and check whether it's actually hitting the cache.</li>
+      <li><strong>Price one worst case.</strong> Pick your riskiest agentic loop and compute what it costs if every step fails once — Ch. 4's ceiling starts as a number on paper before it's a line of code.</li>
+    </ul>
+  </section>
+
   </main>
 </div>
 
 <footer class="colophon">
-  Rates throughout are an illustrative reference tier, not a live price sheet — actual per-token pricing varies by provider and model and changes over time; check current pricing before budgeting against it. Worked examples use round, representative token counts to keep the arithmetic legible, not measurements of a specific model.
+  Rates throughout are an illustrative reference tier, not a live price sheet — actual per-token pricing varies by provider and model and changes over time; check current pricing before budgeting against it. Worked examples use round, representative token counts to keep the arithmetic legible, not measurements of a specific model. Case-study figures in Chapter 12 are as publicly reported by the organizations named, not independently verified by this handbook.
   <br /><br />
   <a class="backlink" style="padding: 0;" href="./">&larr; Back to Token Economics Explorer</a>
 </footer>

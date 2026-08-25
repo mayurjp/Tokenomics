@@ -428,7 +428,7 @@
   <div class="meta">
     <span><strong>Scope</strong> — procurement through governance</span>
     <span><strong>Method</strong> — worked examples on illustrative per-token rates</span>
-    <span><strong>Read time</strong> — ~50 min, or jump to any chapter</span>
+    <span><strong>Read time</strong> — ~60 min, or jump to any chapter</span>
   </div>
 
   <div class="ratecard">
@@ -474,6 +474,7 @@
       <li><a href="#ch11"><span class="n">11</span><span>Multimodal &amp; long-context economics</span></a></li>
       <li><a href="#ch12"><span class="n">12</span><span>Case studies</span></a></li>
       <li><a href="#ch13"><span class="n">13</span><span>Rollout playbook</span></a></li>
+      <li><a href="#ch14"><span class="n">14</span><span>Writing the policy</span></a></li>
     </ol>
   </nav>
 
@@ -495,6 +496,7 @@
       <li><a href="#ch11"><span class="n">11</span><span>Multimodal &amp; long context</span></a></li>
       <li><a href="#ch12"><span class="n">12</span><span>Case studies</span></a></li>
       <li><a href="#ch13"><span class="n">13</span><span>Rollout playbook</span></a></li>
+      <li><a href="#ch14"><span class="n">14</span><span>Writing the policy</span></a></li>
     </ol>
   </details>
 
@@ -1123,11 +1125,92 @@ tokens = 85 + (tiles &times; 170)</code></div>
     </ul>
   </section>
 
+  <!-- ================= CHAPTER 14 ================= -->
+  <section class="chapter" id="ch14">
+    <div class="chapter-head"><span class="num">14</span><h2>Writing the policy</h2></div>
+    <p class="dek">Everything above is a set of mechanisms. A standard is what you get once they're named, owned, and enforceable — the document a platform or FinOps team actually publishes internally, not a chapter to read but a shape to fill in with your own numbers.</p>
+
+    <h3 class="sub">Four roles, not one</h3>
+    <p>Nothing here is enforceable without an owner. A minimal structure:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Roles and what each one owns</caption>
+        <thead><tr><th>Role</th><th>Owns</th><th>Approves</th></tr></thead>
+        <tbody>
+          <tr><td>Feature owner</td><td>Cost-per-outcome for their feature (Ch. 5)</td><td>Their own routing/caching choices within default policy</td></tr>
+          <tr><td>Platform / FinOps owner</td><td>Rate card, telemetry schema, shared caching &amp; routing infra (Ch. 2, 6)</td><td>Exceptions above auto-approval thresholds</td></tr>
+          <tr><td>Security / compliance reviewer</td><td>What may be logged, where it may be sent, which vendors are approved</td><td>Any new model vendor or data-handling change</td></tr>
+          <tr><td>Governance board (monthly)</td><td>Spend anomalies (Ch. 6 alerts), exception backlog</td><td>New default tiers, policy changes themselves</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">Approval thresholds, not blanket rules</h3>
+    <p>Most usage should ship without anyone signing off — the policy exists for the traffic that doesn't fit the default:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Illustrative threshold tiers</caption>
+        <thead><tr><th>Condition</th><th>Requires</th></tr></thead>
+        <tbody>
+          <tr><td>Default tier routing, ceiling declared, feature tagged</td><td class="hi">Auto-approved</td></tr>
+          <tr><td>Projected spend &gt; $500/mo, or Tier A as the feature's default</td><td>Platform/FinOps sign-off</td></tr>
+          <tr><td>New model vendor, or projected spend &gt; $5,000/mo</td><td class="warn-cell">Governance board</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">A starter rule set</h3>
+    <p>Numbered, so each one can be cited, exception-tracked, and superseded individually — a copyable starting point, not a finished standard:</p>
+    <ul class="plain">
+      <li><strong>R1.</strong> Every LLM call site logs the Ch. 6 minimum telemetry event before it ships to production.</li>
+      <li><strong>R2.</strong> No feature defaults to Tier A without a documented reason; classification, extraction and formatting default to Tier C (Ch. 2).</li>
+      <li><strong>R3.</strong> Every agentic loop declares a <span class="mono">cost_ceiling_per_task</span> and a <span class="mono">max_retries</span> before merge (Ch. 4).</li>
+      <li><strong>R4.</strong> Any system prompt over 500 tokens is a cache-prefix candidate; reviewers check that dynamic values sit at the end, not the top (Ch. 7).</li>
+      <li><strong>R5.</strong> A feature must reach Stage 3 rollout maturity before it's allowed to scale past pilot traffic (Ch. 13).</li>
+      <li><strong>R6.</strong> Cost-per-outcome, not cost-per-call, is the number reported in any ROI review (Ch. 5).</li>
+      <li><strong>R7.</strong> No user-identifying or regulated data enters a telemetry event body — feature and team tags are identifiers, not free text.</li>
+      <li><strong>R8.</strong> Exceptions are time-boxed. A Tier A default granted "for now" expires in 90 days and must be re-justified.</li>
+    </ul>
+
+    <h3 class="sub">Showback before chargeback</h3>
+    <p>Two ways to make cost visible to the team that caused it, in order of how much trust they require:</p>
+    <div class="formula"><span class="f-label">Chargeback, once the framework is bounded (Stage 4+)</span><code>team_charge = cost_per_outcome × outcomes_delivered</code></div>
+    <p><strong>Showback</strong> — a team sees its own cost-per-feature (Ch. 6) with no budget debited — fits Stages 1–3, while routing and bounding are still being rolled out; billing a team for a runaway loop that predates its own circuit breaker (Ch. 4) punishes the wrong stage of maturity. <strong>Chargeback</strong> — actual budget debited, by cost-per-outcome rather than raw token spend, so a team is billed for value delivered, not infrastructure noise — fits once Ch. 13's Stage 4 is in place.</p>
+
+    <h3 class="sub">The exception process</h3>
+    <p>Lightweight, or the rules get bypassed silently instead of formally:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Exception request — example filled row</caption>
+        <thead><tr><th>Field</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td>Requesting team</td><td>Sales Ops</td></tr>
+          <tr><td>Rule excepted</td><td>R2 — Tier A default for email drafting</td></tr>
+          <tr><td>Justification</td><td>Draft quality on Tier C measured below acceptance threshold in pilot</td></tr>
+          <tr><td>Expiry</td><td>90 days from grant</td></tr>
+          <tr><td>Approver</td><td>Platform/FinOps owner</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">Review cadence</h3>
+    <ul class="plain">
+      <li><strong>Weekly</strong> — alert triage: spend spikes, cache hit rate drops (Ch. 6).</li>
+      <li><strong>Monthly</strong> — governance board reviews the top cost-per-outcome movers and the exception backlog nearing expiry.</li>
+      <li><strong>Quarterly</strong> — rate-card refresh against actual vendor pricing, and a review of any embedding model version due for a reindex decision (Ch. 10).</li>
+    </ul>
+
+    <div class="trap"><div class="t-label">Cost trap</div><p>A policy with no named owner and no expiry date on its exceptions becomes permanent the moment nobody remembers who granted it — R8 exists specifically so "temporary" has an enforcement date, not just an intention.</p></div>
+
+    <h3 class="sub">What this chapter is not</h3>
+    <p>Not a legal or compliance template, and not a vendor contract — the actual dollar thresholds, data-handling language, and approval authority have to come from your own finance, legal and security teams. What's here is the shape a working policy takes; the numbers in it are illustrative starting points, the same way the rate card at the top of this handbook is.</p>
+  </section>
+
   </main>
 </div>
 
 <footer class="colophon">
-  Rates throughout are an illustrative reference tier, not a live price sheet — actual per-token pricing varies by provider and model and changes over time; check current pricing before budgeting against it. Worked examples use round, representative token counts to keep the arithmetic legible, not measurements of a specific model. Case-study figures in Chapter 12 are as publicly reported by the organizations named, not independently verified by this handbook.
+  Rates throughout are an illustrative reference tier, not a live price sheet — actual per-token pricing varies by provider and model and changes over time; check current pricing before budgeting against it. Worked examples use round, representative token counts to keep the arithmetic legible, not measurements of a specific model. Case-study figures in Chapter 12 are as publicly reported by the organizations named, not independently verified by this handbook. Chapter 14 is a structural template, not legal, compliance or financial advice.
   <br /><br />
   <a class="backlink" style="padding: 0;" href="./">&larr; Back to Token Economics Explorer</a>
 </footer>
